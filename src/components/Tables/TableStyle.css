@@ -1,0 +1,28 @@
+.table-container h2 {
+    color: #000000;
+    background-color: #9EDCEE;
+    padding: 10px;
+    text-align: left;
+  }
+  
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  thead {
+    border-radius: 40px;
+    background-color: #9EDCEE;
+    color: #000000;
+  }
+  
+  th, td {
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+  }
+  
+  tbody tr {
+    background-color: #DCEEF3;
+    color: #5B5B5B;
+  }
+  
