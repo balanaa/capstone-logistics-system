@@ -1,0 +1,347 @@
+.user-management-page {
+  padding: 2rem;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.user-mgmt-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.user-mgmt-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+}
+
+.user-mgmt-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.btn-create-user {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.2rem;
+  background: #1976d2;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-create-user:hover {
+  background: #1565c0;
+}
+
+.btn-create-user i {
+  font-size: 1rem;
+}
+
+.filter-date-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.filter-date-input {
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.search-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  position: absolute;
+  left: 0.75rem;
+  color: #888;
+  pointer-events: none;
+  font-size: 0.9rem;
+}
+
+.search-input {
+  padding: 0.5rem 0.75rem 0.5rem 2.25rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  min-width: 200px;
+  background: #e3f2fd;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #1976d2;
+  background: white;
+}
+
+.page-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #333;
+  min-width: 60px;
+}
+
+.page-arrows {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.arrow-btn {
+  padding: 0.5rem 0.75rem;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.arrow-btn:hover:not(:disabled) {
+  background: #f5f5f5;
+  border-color: #1976d2;
+}
+
+.arrow-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* User Table */
+.user-table-wrapper {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1.5rem;
+}
+
+.user-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.user-table thead {
+  background: #a8d5f5;
+  border-bottom: 2px solid #64b5f6;
+}
+
+.user-table thead th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: #333;
+  font-size: 0.9rem;
+}
+
+.user-table tbody tr {
+  border-bottom: 1px solid #e0e0e0;
+  transition: background 0.2s;
+}
+
+.user-table tbody tr:hover {
+  background: #f9f9f9;
+}
+
+.user-table tbody tr:nth-child(even) {
+  background: #e3f2fd;
+}
+
+.user-table tbody tr:nth-child(even):hover {
+  background: #d6ebfa;
+}
+
+.user-table tbody td {
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+.permission-select {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  background: white;
+  cursor: pointer;
+  width: 100%;
+  max-width: 180px;
+}
+
+.permission-select:disabled {
+  background: #f5f5f5;
+  cursor: not-allowed;
+}
+
+.permission-select:focus {
+  outline: none;
+  border-color: #1976d2;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-action {
+  padding: 0.4rem 0.6rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-reset {
+  background: #4caf50;
+  color: white;
+}
+
+.btn-reset:hover {
+  background: #45a049;
+}
+
+.btn-delete {
+  background: #f44336;
+  color: white;
+}
+
+.btn-delete:hover {
+  background: #da190b;
+}
+
+/* Pagination */
+.user-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
+}
+
+.user-pagination button {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #ddd;
+  background: white;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  min-width: 40px;
+  transition: all 0.2s;
+}
+
+.user-pagination button:hover:not(:disabled) {
+  background: #f5f5f5;
+  border-color: #1976d2;
+}
+
+.user-pagination button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.user-pagination button.active {
+  background: #1976d2;
+  color: white;
+  border-color: #1976d2;
+}
+
+.pagination-ellipsis {
+  padding: 0 0.5rem;
+  color: #888;
+}
+
+/* Toast Notification */
+.toast-notification {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  background: #333;
+  color: white;
+  padding: 1rem 1.5rem;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 10000;
+  animation: slideInUp 0.3s ease;
+}
+
+@keyframes slideInUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 1400px) {
+  .user-table {
+    font-size: 0.85rem;
+  }
+  
+  .permission-select {
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 1200px) {
+  .user-mgmt-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .user-table-wrapper {
+    overflow-x: auto;
+  }
+  
+  .user-table {
+    min-width: 1200px;
+  }
+}
+
+@media (max-width: 768px) {
+  .user-management-page {
+    padding: 1rem;
+  }
+  
+  .user-mgmt-controls {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .search-input {
+    width: 100%;
+  }
+}

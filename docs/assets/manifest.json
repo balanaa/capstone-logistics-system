@@ -1,0 +1,25 @@
+[
+    { "file": "dashboard-tab.png", "component": "DashboardTab", "view": "tab-view", "device": "desktop", "role": "all", "usage": "Dashboard when Dashboard tab is selected (header + sidebar + cropped main area)." },
+    { "file": "dashboard-main.png", "component": "DashboardMain", "view": "main-content", "device": "desktop", "role": "all", "usage": "Dashboard main content only (no header/sidebar). Reminders upper-left, piechart upper-right, table area below." },
+  
+    { "file": "shipment-tab.png", "component": "ShipmentTab", "view": "tab-view", "device": "desktop", "role": "shipment", "usage": "Shipment tab page (header + sidebar + cropped main area). Uses shared department-main.png as the main content area with shipment-specific data." },
+    { "file": "trucking-tab.png", "component": "TruckingTab", "view": "tab-view", "device": "desktop", "role": "trucking", "usage": "Trucking tab page (header + sidebar + cropped main area). Uses shared department-main.png as the main content area with trucking-specific data." },
+    { "file": "finance-tab.png", "component": "FinanceTab", "view": "tab-view", "device": "desktop", "role": "finance", "usage": "Finance tab page (header + sidebar + cropped main area). Uses shared department-main.png as the main content area with finance-specific data." },
+  
+    { "file": "department-main.png", "component": "DepartmentMain", "view": "main-content", "device": "desktop", "role": "shipment|trucking|finance", "usage": "SHARED main content area for Shipment / Trucking / Finance (no header/sidebar). Upper: piechart + reminders; Lower: department table with filters, pagination and blue row-arrow to open profile. The rendering changes based on the `department` prop supplied to the component." },
+  
+    { "file": "shipment-profile-tab.png", "component": "ShipmentProfileTab", "view": "profile-tab", "device": "desktop", "role": "shipment", "usage": "Shipment Profile full page (header + sidebar + profile area) shown after opening a PRO's profile." },
+    { "file": "shipment-profile-main.png", "component": "ShipmentProfileMain", "view": "profile-main", "device": "desktop", "role": "shipment", "usage": "Shipment Profile main content only (no header/sidebar). Contains: General info, remarks, Document List windows, Add-document area." },
+  
+    { "file": "trucking-profile-tab.png", "component": "TruckingProfileTab", "view": "profile-tab", "device": "desktop", "role": "trucking", "usage": "Trucking Profile full page (header + sidebar + profile area) shown after opening a PRO's profile." },
+    { "file": "trucking-profile-main.png", "component": "TruckingProfileMain", "view": "profile-main", "device": "desktop", "role": "trucking", "usage": "Trucking Profile main content only (no header/sidebar). Contains: General info, remarks, Document List windows, Add-document area." },
+  
+    { "file": "finance-profile-tab.png", "component": "FinanceProfileTab", "view": "profile-tab", "device": "desktop", "role": "finance", "usage": "Finance Profile full page (header + sidebar + profile area) shown after opening a PRO's profile." },
+    { "file": "finance-profile-main.png", "component": "FinanceProfileMain", "view": "profile-main", "device": "desktop", "role": "finance", "usage": "Finance Profile main content only (no header/sidebar). Contains: General info, remarks, Document List windows, Add-document area." },
+  
+    { "file": "table-list-example.png", "component": "TableListExample", "view": "component", "device": "desktop", "role": "all", "usage": "Department list table example: filters, search, pagination, and the blue row-arrow next to PRO number that opens the profile." },
+    { "file": "login.png", "component": "LoginPage", "view": "full-page", "device": "desktop", "role": "public", "usage": "Login page layout (email + password). Use as canonical Login.js reference." },
+    { "file": "register.png", "component": "RegisterPage", "view": "full-page", "device": "desktop", "role": "public", "usage": "Register page (deferred)." },
+    { "file": "user-management.png", "component": "UserManagement", "view": "full-page", "device": "desktop", "role": "analytics", "usage": "User management/accounts page (accessible from header)." }
+  ]
+  

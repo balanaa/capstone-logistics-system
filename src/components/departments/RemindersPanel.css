@@ -1,0 +1,29 @@
+/* Reminders window with rounded corners and padded rows */
+.rem-panel {
+  background: var(--lighter-color);
+  border-radius: 14px;
+}
+.rem-header {
+  background: var(--secondary-color);
+  padding: .6rem 1.4rem;
+  border-radius: 14px 14px 0 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+.rem-body {
+  padding: .8rem 1.2rem 1.2rem;
+}
+.rem-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem .4rem; /* spacing via padding as per reference */
+  border-bottom: 1px solid #D4E9F2;
+}
+.rem-row:last-child { border-bottom: none; }
+.rem-col { display: flex; flex-direction: column; }
+.rem-title { font-size: 1.1rem; font-weight: 700; color: #0F839D; }
+.rem-sub { color: #7E7C7C; margin-top: .25rem; }
+.rem-date { color: #535353; font-weight: 600; }
+
+

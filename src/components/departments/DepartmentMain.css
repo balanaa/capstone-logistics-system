@@ -1,0 +1,83 @@
+/* Layout */
+.dept-main {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+}
+
+.dept-top {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 12px;
+	align-items: stretch;
+}
+
+/* Cards */
+.dept-card {
+	background: var(--lighter-color);
+	border-radius: 14px;
+}
+
+.dept-card-header {
+	background: var(--secondary-color);
+	padding: .8rem 1.4rem;
+	border-radius: 14px 14px 0 0;
+	font-weight: 800;
+}
+
+.dept-card-body {
+	padding: 1rem 1.4rem 1.2rem;
+}
+
+/* List/Table */
+.dept-list-header {
+	font-weight: 800;
+	margin: 8px 0;
+}
+
+.dept-table-wrap {
+	overflow: auto;
+	background: var(--lighter-color);
+	border-radius: 14px;
+}
+
+.dept-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 0.95rem;
+}
+
+.dept-table thead th {
+	background: #B7E2F1;
+	color: #003B74;
+	font-weight: 700;
+}
+
+.dept-table th,
+.dept-table td {
+	padding: 12px 14px;
+	border-bottom: 1px solid #cfe6ee;
+}
+
+.dept-table tbody tr:nth-child(even) {
+	background: #EAF7FE;
+}
+
+.dept-table tbody tr:nth-child(odd) {
+	background: #DBEDF4;
+}
+
+.dept-open {
+	border: none;
+	background: transparent;
+	cursor: pointer;
+	font-size: 14px;
+	color: #005CAB;
+}
+
+/* Responsive */
+@media (max-width: 700px) {
+	.dept-top { grid-template-columns: 1fr; }
+}
+
+

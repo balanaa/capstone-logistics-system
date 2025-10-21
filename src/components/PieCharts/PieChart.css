@@ -1,36 +1,31 @@
-:root {
-  --window-border-radius: 10px;
-}
-
 .chart-container {
-  width: 600px;
-  /* height: 260px; */
-  display: inline-block;
+  width: 100%;
   border-radius: var(--window-border-radius);
-
-
   background-color: var(--lighter-color);
+  border-radius: 14px;
 }
 
 .window-header{
-  background-color: var(--secondary-color);
-  padding: .4em 2em;
-  border-radius: var(--window-border-radius) var(--window-border-radius) 0px 0px;
+    background: var(--secondary-color);
+    padding: .6rem 1.4rem;
+    border-radius: 14px 14px 0 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+  }
 
-  font-weight: 600;
-}
-
-.window-body{
-  padding: 1rem 2rem 2rem 2rem;
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-}
+  .window-body {
+    padding: 1rem 2rem 2rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: min(50px, 10vw);
+  }
+  
 
 .pie-chart {
   position: relative;
-  width: 200px;
-  height: 200px;
+  width: 280px;
+  height: 280px;
   border-radius: 50%;
   background: conic-gradient(
     #24B3B8 var(--completed),
@@ -45,53 +40,75 @@
   display: flex; 
   justify-content: center;      
   align-items: center;
-
   border-radius: 50%;
   box-shadow: 4px 8px 4px rgba(0, 0, 0, 0.3);
-
-  width: 220px;
-  height: 220px;
+  width: 300px;
+  height: 300px;
   background-color: var(--background-color);
 }
 
 .pie-chart::before {
   content: "";
   position: absolute;
-  width: 140px;
-  height: 140px;
-  background-color: var(--lighter-color); /* eto yung pinapatungan ng 100, eto yung butas ng donut */
+  width: 200px;
+  height: 200px;
+  background-color: var(--lighter-color);
   border-radius: 50%;
 }
 
-
-.chart-label {
-  margin-top: 40px;
-  font-size: 1em;
-  font-weight: bold;
-  color: #333;
-}
-
-/* ----------------- CSS sa label content ----------------- */
-
-/* new: Added a wrapper for the content inside the donut to ensure proper stacking above the white center */
+/* label content inside donut */
 .pie-content { 
-  position: relative; /* new: ensures that the content is positioned relative to its container */
-  z-index: 2;        /* new: places the text above the ::before white circle overlay */
-  text-align: center;/* new: centers the text within the container */
+  position: relative;
+  text-align: center;
 }
 
-/* new: Overrides any absolute positioning from the parent rule for inner span */
 .pie-content span { 
-  display: block;     /* new: makes the number span a block to push the label below */
-  font-size: 2rem;   /* new: maintains font size for the number */
-  font-weight: bold;  /* new: ensures the number is bold */
-  color: black;       /* new: sets the text color for the number */
+  display: block;
+  font-size: 2rem;
+  font-weight: bold;
+  color: black;
 }
 
-/* new: Styles for the label below the number */
 .total-label { 
-  display: block;     /* new: forces the label onto a new line */
-  font-size: .8rem;     /* new: sets the font size for the label */
-  color: #333;        /* new: sets the color for the label */
-  margin-top: 4px;    /* new: adds a little spacing between the number and the label */
+  display: block;
+  font-size: .8rem;
+  color: #333;
+  margin-top: 4px;
 }
+
+/* right-side stats */
+.chart-stats { 
+  display: flex; 
+  flex-direction: column; 
+}
+
+.stat-row { 
+  display: flex; 
+  gap: 12px; 
+  align-items: center; 
+  margin-bottom: 12px; 
+}
+
+.stat-label { 
+  font-weight: 700; 
+}
+
+.stat-label.completed { 
+  color: #1AAFB5; 
+}
+
+.stat-label.ongoing { 
+  color: #0F839D; 
+}
+
+.stat-row.total .stat-label, 
+.stat-row.total .stat-value { 
+  font-weight: 800; 
+}
+
+.stats-separator { 
+  border-top: 2px solid #333; 
+  margin: 18px 0 10px; 
+  width: 220px; 
+}
+

@@ -41,9 +41,7 @@
 .edit-button {
     border-radius: 8px;
     border: none;
-    display: block;
-    margin-left: auto;
-
+    display: inline-block;
     padding: .6em 1.2em;
     width: 240px;
     height: 40px;
@@ -57,4 +55,54 @@
     background-color: #9EDCEE;
     color: #005CAB;
     cursor: pointer;
+}
+
+.button-row {
+    display: flex;
+    gap: 12px;
+    justify-content: space-between; /* download left, edit/delete right */
+    margin-top: 14px;
+}
+
+.delete-button {
+    border-radius: 8px;
+    border: none;
+    display: inline-block;
+    padding: .6em 1.2em;
+    width: 240px;
+    height: 40px;
+    font-weight: 600;
+    background-color: #C62828; /* red */
+    color: white;
+}
+
+.delete-button:hover {
+    background-color: #FFCDD2;
+    color: #C62828;
+    cursor: pointer;
+}
+
+.line-items {
+    margin-top: 12px;
+}
+
+.line-items-table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: rgba(255,255,255,0.6);
+}
+
+.line-items-table th,
+.line-items-table td {
+    border: 1px solid #cfd8dc;
+    padding: 8px 10px;
+    text-align: left;
+}
+
+.line-items-table thead th {
+    background: #eceff1;
+}
+
+.line-items-table tbody tr:nth-child(odd) {
+    background: #fafafa;
 }

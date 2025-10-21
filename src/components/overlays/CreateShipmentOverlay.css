@@ -1,0 +1,293 @@
+.cso-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.cso-modal {
+  background: #fff;
+  width: 95vw;
+  max-width: 1400px;
+  height: 90vh;
+  padding: 0;
+  border-radius: 10px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.cso-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 2px solid #005CAB;
+  background: #f9fafb;
+  font-size: 1rem;
+}
+
+.cso-header-right span {
+  font-weight: 600;
+  font-size: 1rem;
+  color: #374151;
+}
+
+.cso-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.cso-header-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.cso-header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.cso-close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 4px 8px;
+  line-height: 1;
+  transition: color 0.2s;
+}
+
+.cso-close-btn:hover {
+  color: #374151;
+}
+
+.cso-body {
+  display: grid;
+  grid-template-columns: minmax(450px, 550px) 1fr;
+  grid-gap: 16px;
+  padding: 20px;
+  height: calc(100% - 120px);
+  overflow: hidden;
+}
+
+.cso-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-top: 2px solid #005CAB;
+  background: #f9fafb;
+}
+
+.cso-footer-left {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.cso-footer-right {
+  display: flex;
+  gap: 8px;
+}
+
+.cso-left, .cso-right { display: flex; flex-direction: column; min-height: 0; }
+.cso-left { border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; background: #f9fafb; }
+.cso-right { overflow: auto; }
+
+.cso-drop {
+  border: 2px dashed #888;
+  border-radius: 8px;
+  padding: 28px;
+  text-align: center;
+  cursor: pointer;
+  color: #444;
+}
+.cso-accept { color: #888; font-size: 12px; margin-top: 6px; }
+
+.cso-preview { display: flex; flex-direction: column; gap: 8px; height: 100%; }
+.cso-filename { font-weight: 600; }
+.cso-frame { width: 100%; height: 100%; border: 1px solid #e5e7eb; }
+.cso-image { width: 100%; height: 100%; object-fit: contain; background: #f9fafb; border: 1px solid #e5e7eb; }
+.cso-fallback { color: #666; border: 1px dashed #ddd; padding: 16px; text-align: center; }
+
+.cso-right form { padding: 0 0.75em; }
+.cso-right label { display: block; margin-bottom: 0.375em; font-weight: 600; }
+.cso-right input { padding: 0 0.625em; height: 3rem; font-size: 0.875rem; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+.cso-right textarea { width: 100%; padding: 0.5em 0.625em; font-size: 0.875rem; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+.cso-hint { font-size: 0.75rem; color: #666; margin-top: 0.25em; }
+.cso-error { color: #b00020; margin-top: 0.5em; }
+
+/* Container/Seal Table Styles */
+.cargo-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+.cargo-table thead tr { display: grid; grid-template-columns: 1fr 1fr auto; gap: 0.5em; margin-bottom: 0.75em; }
+.cargo-table thead th { text-align: left; padding: 0; font-weight: normal; font-size: 0.875rem; color: #1f2937; }
+.cargo-table tbody tr { display: grid; grid-template-columns: 1fr 1fr auto; gap: 0.5em; padding-bottom: 0.5em; border-bottom: 1px solid #eee; }
+.cargo-table tbody tr:last-child { border-bottom: none; }
+.cargo-table td { padding: 0; }
+.cargo-table input { width: 100%; height: 3rem; padding: 0 0.625em; font-size: 0.875rem !important; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+
+/* Invoice Table Styles - More compact for line items */
+.invoice-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+.invoice-table thead tr { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 0.5em; margin-bottom: 0.75em; }
+.invoice-table thead th { text-align: left; padding: 0; font-weight: normal; font-size: 0.875rem; color: #1f2937; }
+.invoice-table tbody tr { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 0.5em; padding-bottom: 0.5em; border-bottom: 1px solid #eee; }
+.invoice-table tbody tr:last-child { border-bottom: none; }
+.invoice-table td { padding: 0; }
+.invoice-table input { width: 100%; height: 2.25rem; padding: 0 0.5em; font-size: 0.875rem !important; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+
+/* Invoice Section Styles */
+.invoice-section { border-top: 2px solid #ddd; padding-top: 1rem; margin-bottom: 1rem; }
+.invoice-section h3 { margin-top: 0; margin-bottom: 1rem; font-weight: 600; color: #333; }
+
+/* Packing List Section Styles - No top border for first section */
+.packing-section { padding-top: 1rem; margin-bottom: 1rem; }
+.packing-section h3 { margin-top: 0; margin-bottom: 1rem; font-weight: 600; color: #333; }
+.packing-section-with-border { border-top: 2px solid #ddd; padding-top: 1rem; margin-bottom: 1rem; }
+.packing-section-with-border h3 { margin-top: 0; margin-bottom: 1rem; font-weight: 600; color: #333; }
+
+/* Invoice Delete Button - Smaller size */
+.invoice-delete-btn {
+  background: #f44336;
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: 0.5em;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+  height: 2.25rem;
+  width: 2.25rem;
+}
+
+.invoice-delete-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.invoice-delete-btn:not(:disabled):hover {
+  background: #da190b;
+}
+
+.invoice-delete-btn i {
+  font-size: 0.875rem;
+}
+
+/* Packing List Delete Button - Same as invoice for consistency */
+.packing-delete-btn {
+  background: #f44336;
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: 0.5em;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+  height: 2.25rem;
+  width: 2.25rem;
+}
+
+.packing-delete-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.packing-delete-btn:not(:disabled):hover {
+  background: #da190b;
+}
+
+.packing-delete-btn i {
+  font-size: 0.875rem;
+}
+
+/* Section Styles */
+.section-with-border {
+  border-top: 2px solid #ddd;
+  padding-top: 1rem;
+  margin-bottom: 1rem;
+}
+
+/* Add Container/Seal Button */
+.add-pair-btn { 
+  margin-top: 0.75em; 
+  padding: 0.75em 1em; 
+  background: #f3f4f6; 
+  border: 1px solid #d1d5db; 
+  border-radius: 4px; 
+  cursor: pointer; 
+  font-size: 0.9rem; 
+  width: 100%; 
+  text-align: center; 
+  display: block; 
+}
+
+/* Delete Button in Table */
+.delete-pair-btn { 
+  background: #f44336;
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: 0.5em;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+  height: 2.25rem;
+  width: 2.25rem;
+  font-size: 0.75rem;
+}
+
+.delete-pair-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.delete-pair-btn:not(:disabled):hover {
+  background: #da190b;
+}
+.cso-actions { margin-top: auto; display: flex; gap: 8px; justify-content: flex-end; }
+.cso-btn { padding: .6em 1.1em; border-radius: 8px; border: 1px solid #ddd; background: #fff; cursor: pointer; }
+.cso-primary { background: #005CAB; color: #fff; border-color: #005CAB; }
+
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #333;
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 14px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+
+

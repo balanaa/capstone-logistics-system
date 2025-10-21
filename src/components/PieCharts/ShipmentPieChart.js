@@ -37,8 +37,23 @@ const ShipmentPieChart = () => {
           >
             <div className="pie-content">
               <span id="total-transactions">{total}</span>
-              <small className="total-label">Shipment</small>
+              <small className="total-label">Total</small>
             </div>
+          </div>
+        </div>
+        <div className="chart-stats">
+          <div className="stat-row">
+            <div className="stat-label completed">Completed:</div>
+            <div className="stat-value">{transactions.completed}</div>
+          </div>
+          <div className="stat-row">
+            <div className="stat-label ongoing">Ongoing:</div>
+            <div className="stat-value">{transactions.ongoing}</div>
+          </div>
+          <div className="stats-separator" />
+          <div className="stat-row total">
+            <div className="stat-label">Total:</div>
+            <div className="stat-value">{total}</div>
           </div>
         </div>
       </div>

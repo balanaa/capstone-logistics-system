@@ -142,4 +142,123 @@
     outline: none;
     width: 90%;
     font-size: 1rem;
+}
+
+/* Shipment Profile Header Styles */
+.shipment-profile-header-bar {
+    position: sticky;
+    top: var(--header-height);
+    z-index: 10;
+    width: calc(100% + 2rem);
+    background: #fff;
+    min-height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 2rem;
+    box-sizing: border-box;
+    border-bottom: 1px solid #e0e0e0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin: -1rem -1rem 16px -1rem;
+}
+
+.shipment-header-left {
+    flex-shrink: 0;
+}
+
+.shipment-header-title {
+    font-size: 2.1rem;
+    font-weight: 600;
+    color: #222;
+    letter-spacing: -1px;
+}
+
+.shipment-header-prono {
+    color: #888;
+    font-size: 1.4rem;
+    font-weight: 400;
+    margin-left: 0.5rem;
+}
+
+.shipment-header-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-shrink: 0;
+}
+
+.shipment-header-btn {
+    border: none;
+    border-radius: 8px;
+    padding: 0.6em 1.5em;
+    font-size: 1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 200px;
+    justify-content: center;
+}
+
+.shipment-header-btn.disabled {
+    background: #bee4f2;
+    color: #666;
+    cursor: not-allowed;
+}
+
+.shipment-header-btn.enabled {
+    background: #0066cc;
+    color: #fff;
+}
+
+.shipment-header-btn.enabled:hover {
+    background: #0052a3;
+}
+
+.btn-icon {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+.shipment-header-btn.disabled .btn-icon {
+    background: rgba(102, 102, 102, 0.2);
+}
+
+.shipment-header-search {
+    background: #bee4f2;
+    border: none;
+    border-radius: 8px;
+    padding: 0.6em 1.5em;
+    font-size: 1rem;
+    width: 260px;
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+}
+
+.shipment-header-search input {
+    border: none;
+    background: transparent;
+    outline: none;
+    width: 100%;
+    font-size: 1rem;
+    color: #666;
+}
+
+.shipment-header-search input::placeholder {
+    color: #999;
+}
+
+.shipment-header-search i {
+    font-size: 1rem;
+    color: #666;
 } 

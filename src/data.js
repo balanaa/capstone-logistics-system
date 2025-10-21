@@ -2,7 +2,7 @@
 
 export const proDocumentList = [
 {
-    proNo: "PRO001",
+    proNo: "2025001",
     documents: [
     {
         type: "Bill of Lading",
@@ -26,8 +26,14 @@ export const proDocumentList = [
         data: [
         { label: "Invoice No.", info: "INV001" },
         { label: "Invoice Date", info: "2025-04-10" },
-        { label: "Invoice Amount", info: 15000.00 },
-        { label: "Incoterms", info: "FOB" }
+        { label: "Incoterms", info: "FOB" },
+        { label: "Total Quantity", info: "40" },
+        { label: "Total Amount", info: "15000.00" }
+        ],
+        items: [
+        { product: "Sample Product A", quantity: 10, unitPrice: 500, amount: 5000 },
+        { product: "Sample Product B", quantity: 20, unitPrice: 300, amount: 6000 },
+        { product: "Sample Product C", quantity: 10, unitPrice: 400, amount: 4000 }
         ]
     },
     {
@@ -36,6 +42,11 @@ export const proDocumentList = [
         { label: "Quantity", info: "100 cartons" },
         { label: "Net Weight", info: 1100.00 },
         { label: "Gross Weight", info: 1200.50 }
+        ],
+        items: [
+        { product: "Sample Product A", quantity: 30, weight: 350.5 },
+        { product: "Sample Product B", quantity: 40, weight: 420.0 },
+        { product: "Sample Product C", quantity: 30, weight: 329.5 }
         ]
     },
     {
@@ -89,7 +100,7 @@ export const proDocumentList = [
     ]
 },
 {
-    proNo: "PRO002",
+    proNo: "2025002",
     documents: [
     {
         type: "Bill of Lading",
@@ -113,8 +124,14 @@ export const proDocumentList = [
         data: [
         { label: "Invoice No.", info: "INV002" },
         { label: "Invoice Date", info: "2025-04-12" },
-        { label: "Invoice Amount", info: 22000.50 },
-        { label: "Incoterms", info: "CFR" }
+        { label: "Incoterms", info: "CFR" },
+        { label: "Total Quantity", info: "30" },
+        { label: "Total Amount", info: "22000.00" }
+        ],
+        items: [
+        { product: "Widget Alpha", quantity: 15, unitPrice: 700, amount: 10500 },
+        { product: "Widget Beta", quantity: 10, unitPrice: 850, amount: 8500 },
+        { product: "Widget Gamma", quantity: 5, unitPrice: 600, amount: 3000 }
         ]
     },
     {
@@ -123,6 +140,11 @@ export const proDocumentList = [
         { label: "Quantity", info: "50 packages" },
         { label: "Net Weight", info: 2800.00 },
         { label: "Gross Weight", info: 3000.00 }
+        ],
+        items: [
+        { product: "Widget Alpha", quantity: 20, weight: 950.0 },
+        { product: "Widget Beta", quantity: 15, weight: 980.0 },
+        { product: "Widget Gamma", quantity: 15, weight: 870.0 }
         ]
     },
     {
@@ -176,7 +198,7 @@ export const proDocumentList = [
     ]
 },
 {
-    proNo: "PRO003",
+    proNo: "2025003",
     documents: [
     {
         type: "Bill of Lading",
@@ -200,8 +222,14 @@ export const proDocumentList = [
         data: [
         { label: "Invoice No.", info: "INV003" },
         { label: "Invoice Date", info: "2025-04-14" },
-        { label: "Invoice Amount", info: 18000.75 },
-        { label: "Incoterms", info: "CIF" }
+        { label: "Incoterms", info: "CIF" },
+        { label: "Total Quantity", info: "30" },
+        { label: "Total Amount", info: "18000.00" }
+        ],
+        items: [
+        { product: "Part X", quantity: 12, unitPrice: 650, amount: 7800 },
+        { product: "Part Y", quantity: 8, unitPrice: 900, amount: 7200 },
+        { product: "Part Z", quantity: 10, unitPrice: 300, amount: 3000 }
         ]
     },
     {
@@ -210,6 +238,11 @@ export const proDocumentList = [
         { label: "Quantity", info: "75 pallets" },
         { label: "Net Weight", info: 4800.00 },
         { label: "Gross Weight", info: 5000.75 }
+        ],
+        items: [
+        { product: "Part X", quantity: 25, weight: 1600.0 },
+        { product: "Part Y", quantity: 20, weight: 1700.0 },
+        { product: "Part Z", quantity: 30, weight: 1500.75 }
         ]
     },
     {
