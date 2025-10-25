@@ -3,7 +3,7 @@
   "short_name": "CrossPort",
   "theme_color": "#005CAB",
   "background_color": "#dceef3",
-  "display": "fullscreen",
+  "display": "standalone",
   "orientation": "portrait",
   "scope": "/",
   "start_url": "/?source=pwa",

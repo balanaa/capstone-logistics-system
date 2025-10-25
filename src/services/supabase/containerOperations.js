@@ -28,16 +28,27 @@ export async function logContainerAction({
     return;
   }
 
-  // Get user details for logging
+  // Get user details for logging from profiles table
   let userName = 'Unknown User'
   try {
-    const { data: session } = await supabase.auth.getSession()
-    if (session?.session?.user) {
-      const user = session.session.user
-      userName = user.user_metadata?.full_name || user.email || `User ${user.id.substring(0, 8)}`
+    console.log(`[logContainerAction] Fetching user name from profiles table for user: ${userId}`)
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', userId)
+      .single()
+    
+    if (!profileError && profile?.full_name) {
+      userName = profile.full_name
+      console.log(`[logContainerAction] Found user name in profiles: ${userName}`)
+    } else {
+      console.warn(`[logContainerAction] Could not fetch user name from profiles:`, profileError)
+      // Fallback to user ID if profile not found
+      userName = `User ${userId.substring(0, 8)}`
     }
   } catch (err) {
-    console.warn('Could not get user details:', err)
+    console.warn('Could not get user details from profiles:', err)
+    userName = `User ${userId.substring(0, 8)}`
   }
 
   const { error } = await supabase.from("actions_log").insert({
