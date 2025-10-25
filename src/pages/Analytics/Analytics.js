@@ -3,6 +3,10 @@ import './Analytics.css';
 import { 
   fetchAllAnalyticsData 
 } from '../../services/supabase/analytics';
+import { 
+  analyticsWebSocket,
+  useAnalyticsWebSocket 
+} from '../../services/supabase/analyticsWebSocket';
 import {
   LineChart,
   Line,
@@ -42,10 +46,81 @@ function Analytics() {
     endDate: null,
     period: 'Max'
   });
+  
+  // WebSocket connection status
+  const [wsConnectionStatus, setWsConnectionStatus] = useState({
+    isConnected: false,
+    reconnectAttempts: 0,
+    activeChannels: []
+  });
+  
+  // Last update timestamp for real-time indicators
+  const [lastUpdate, setLastUpdate] = useState(null);
 
   useEffect(() => {
     fetchAnalyticsData();
   }, [dateRange]);
+
+  // Initialize WebSocket connections for real-time updates
+  useEffect(() => {
+    console.log('🔌 Initializing Analytics WebSocket connections...');
+    
+    const callbacks = {
+      // Financial analytics updates
+      financial_update: (payload) => {
+        console.log('💰 Financial data update triggered:', payload);
+        refreshFinancialData();
+      },
+      
+      // Trucking analytics updates
+      trucking_update: (payload) => {
+        console.log('🚛 Trucking data update triggered:', payload);
+        refreshTruckingData();
+      },
+      
+      // Pipeline updates
+      pipeline_update: (payload) => {
+        console.log('📊 Pipeline data update triggered:', payload);
+        refreshPipelineData();
+      },
+      
+      // Workload updates
+      workload_update: (payload) => {
+        console.log('⚡ Workload data update triggered:', payload);
+        refreshWorkloadData();
+      },
+      
+      // General data update callback
+      onDataUpdate: (sections, payload) => {
+        console.log('🔄 General analytics data update:', sections, payload);
+        setLastUpdate(new Date());
+      },
+      
+      // Connection status callback
+      onConnectionStatusChange: (status) => {
+        setWsConnectionStatus(status);
+      }
+    };
+    
+    // Initialize WebSocket connections
+    analyticsWebSocket.initialize(callbacks);
+    
+    // Cleanup on unmount
+    return () => {
+      console.log('🧹 Cleaning up Analytics WebSocket connections...');
+      analyticsWebSocket.cleanup();
+    };
+  }, []);
+
+  // Monitor WebSocket connection status
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const status = analyticsWebSocket.getConnectionStatus();
+      setWsConnectionStatus(status);
+    }, 5000); // Check every 5 seconds
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Handle hash navigation for scroll anchoring
   useEffect(() => {
@@ -92,6 +167,7 @@ function Analytics() {
       // Fetch real data from Supabase
       const data = await fetchAllAnalyticsData(dateRange.startDate, dateRange.endDate);
       setAnalyticsData(data);
+      setLastUpdate(new Date());
     } catch (error) {
       console.error('Error fetching analytics data:', error);
       // Fallback to empty data on error
@@ -113,16 +189,140 @@ function Analytics() {
     }
   };
 
+  // Individual data refresh functions for real-time updates
+  const refreshFinancialData = async () => {
+    try {
+      const { 
+        getTotalUnpaidAmount, 
+        getTotalPaidAmount, 
+        getUnpaidAmountByConsignee, 
+        getMonthlyRevenueTrends 
+      } = await import('../../services/supabase/analytics');
+      
+      const [unpaidAmount, paidAmount, unpaidByConsignee, revenueByMonth] = await Promise.all([
+        getTotalUnpaidAmount(dateRange.startDate, dateRange.endDate),
+        getTotalPaidAmount(dateRange.startDate, dateRange.endDate),
+        getUnpaidAmountByConsignee(dateRange.startDate, dateRange.endDate),
+        getMonthlyRevenueTrends(dateRange.startDate, dateRange.endDate)
+      ]);
+      
+      setAnalyticsData(prev => ({
+        ...prev,
+        unpaidAmount,
+        paidAmount,
+        unpaidByConsignee,
+        revenueByMonth
+      }));
+      
+      console.log('✅ Financial data refreshed');
+    } catch (error) {
+      console.error('❌ Error refreshing financial data:', error);
+    }
+  };
+
+  const refreshTruckingData = async () => {
+    try {
+      const { 
+        getAverageTurnaroundDays, 
+        getAverageTurnaroundByDriver, 
+        getContainersInTransit, 
+        getContainersToBeBooked 
+      } = await import('../../services/supabase/analytics');
+      
+      const [avgTurnaroundDays, avgTurnaroundByDriver, containersInTransit, containersToBeBooked] = await Promise.all([
+        getAverageTurnaroundDays(dateRange.startDate, dateRange.endDate),
+        getAverageTurnaroundByDriver(dateRange.startDate, dateRange.endDate),
+        getContainersInTransit(dateRange.startDate, dateRange.endDate),
+        getContainersToBeBooked(dateRange.startDate, dateRange.endDate)
+      ]);
+      
+      setAnalyticsData(prev => ({
+        ...prev,
+        avgTurnaroundDays,
+        avgTurnaroundByDriver,
+        containersInTransit,
+        containersToBeBooked
+      }));
+      
+      console.log('✅ Trucking data refreshed');
+    } catch (error) {
+      console.error('❌ Error refreshing trucking data:', error);
+    }
+  };
+
+  const refreshPipelineData = async () => {
+    try {
+      const { getCrossDepartmentalPipeline, getPipelineSummary } = await import('../../services/supabase/analytics');
+      
+      const [pipelineData, pipelineSummary] = await Promise.all([
+        getCrossDepartmentalPipeline(dateRange.startDate, dateRange.endDate),
+        getPipelineSummary(dateRange.startDate, dateRange.endDate)
+      ]);
+      
+      setAnalyticsData(prev => ({
+        ...prev,
+        pipelineData,
+        pipelineSummary
+      }));
+      
+      console.log('✅ Pipeline data refreshed');
+    } catch (error) {
+      console.error('❌ Error refreshing pipeline data:', error);
+    }
+  };
+
+  const refreshWorkloadData = async () => {
+    try {
+      const { getDepartmentalWorkload } = await import('../../services/supabase/analytics');
+      
+      const departmentalWorkload = await getDepartmentalWorkload(dateRange.startDate, dateRange.endDate);
+      
+      setAnalyticsData(prev => ({
+        ...prev,
+        departmentalWorkload
+      }));
+      
+      console.log('✅ Workload data refreshed');
+    } catch (error) {
+      console.error('❌ Error refreshing workload data:', error);
+    }
+  };
+
   if (loading) {
     return (
       <div className="analytics-loading">
         <p>Loading analytics data...</p>
+        {wsConnectionStatus.isConnected && (
+          <div className="realtime-indicator">
+            <span className="realtime-dot"></span>
+            <span>Real-time updates enabled</span>
+          </div>
+        )}
       </div>
     );
   }
 
   return (
     <>
+      {/* Real-time Status Indicator */}
+      <div className="realtime-status-bar">
+        <div className="realtime-indicator">
+          <span className={`realtime-dot ${wsConnectionStatus.isConnected ? 'connected' : 'disconnected'}`}></span>
+          <span className="realtime-text">
+            {wsConnectionStatus.isConnected ? 'Real-time updates active' : 'Real-time updates disconnected'}
+          </span>
+        </div>
+        {lastUpdate && (
+          <div className="last-update">
+            Last updated: {lastUpdate.toLocaleTimeString()}
+          </div>
+        )}
+        {wsConnectionStatus.reconnectAttempts > 0 && (
+          <div className="reconnect-info">
+            Reconnecting... (attempt {wsConnectionStatus.reconnectAttempts})
+          </div>
+        )}
+      </div>
 
       {/* SECTION 1: FINANCIAL ANALYTICS */}
       <section id="financial-performance" className="analytics-section">

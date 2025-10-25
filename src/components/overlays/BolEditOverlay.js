@@ -391,7 +391,7 @@ export default function BolEditOverlay({
 
   return (
     <div className="cso-backdrop" onClick={onClose}>
-      <div className="cso-modal" onClick={(e) => e.stopPropagation()} style={{ backgroundColor: '#f0fdf4' }}>
+      <div className="cso-modal" onClick={(e) => e.stopPropagation()} style={{ backgroundColor: 'white' }}>
         {/* Header */}
         <div className="cso-header">
           <div className="cso-header-left">
@@ -541,8 +541,8 @@ export default function BolEditOverlay({
                     onClick={() => setShowCamera(true)}
                     style={{
                       padding: '8px 16px',
-                      background: '#10b981',
-                      color: 'white',
+                      background: 'white',
+                      color: '#374151',
                       borderRadius: '6px',
                       cursor: 'pointer',
                       fontSize: '0.875rem',

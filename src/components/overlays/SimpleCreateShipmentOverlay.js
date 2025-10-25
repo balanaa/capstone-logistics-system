@@ -132,8 +132,8 @@ export default function SimpleCreateShipmentOverlay({ open, onClose, onConfirm, 
         {/* Visual indicator - NEW SIMPLE VERSION */}
         <div style={{ 
           padding: '8px 12px', 
-          backgroundColor: '#10b981', 
-          color: 'white', 
+          backgroundColor: 'white', 
+          color: '#374151', 
           borderRadius: '6px', 
           marginBottom: '1rem',
           textAlign: 'center',

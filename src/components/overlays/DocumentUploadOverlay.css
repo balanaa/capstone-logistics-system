@@ -2,14 +2,14 @@
 
 /* Invoice Upload Overlay Specific Styling */
 .invoice-upload-overlay .duo-header {
-  background: #10b981;
-  color: white;
+  background: white;
+  color: #374151;
 }
 
 /* Delivery Order Upload Overlay Specific Styling */
 .delivery-order-green .duo-header {
-  background: #10b981;
-  color: white;
+  background: white;
+  color: #374151;
 }
 
 /* Calculated Input Styling */

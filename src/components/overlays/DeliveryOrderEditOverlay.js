@@ -314,15 +314,15 @@ export default function DeliveryOrderEditOverlay({
                       gap: '8px'
                     }}
                   >
-                    📁 Upload File
+Upload File
                   </label>
                   <button
                     type="button"
                     onClick={() => setShowCamera(true)}
                     style={{
                       padding: '10px 20px',
-                      background: '#10b981',
-                      color: 'white',
+                      background: 'white',
+                      color: '#374151',
                       borderRadius: '6px',
                       cursor: 'pointer',
                       fontSize: '0.875rem',
@@ -332,7 +332,7 @@ export default function DeliveryOrderEditOverlay({
                       gap: '8px'
                     }}
                   >
-                    📷 Take a Picture
+Take a Picture
                   </button>
                 </div>
 
