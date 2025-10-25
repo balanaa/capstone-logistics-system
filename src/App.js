@@ -63,13 +63,14 @@ function AppContent() {
   const location = useLocation();
   
   // For public routes, don't use AuthProvider
-  if (location.pathname === '/' || location.pathname === '/login' || location.pathname === '/camera' || location.pathname === '/reset-password') {
+  if (location.pathname === '/' || location.pathname === '/login' || location.pathname === '/camera' || location.pathname === '/reset-password' || location.pathname === '/403') {
     return (
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/camera" element={<Camera />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/403" element={<Forbidden403 />} />
       </Routes>
     );
   }
@@ -86,8 +87,6 @@ function AppContent() {
 function MainContent() {
   return (
     <Routes>
-      <Route path="/403" element={<Forbidden403 />} />
-      
       <Route path="/dashboard" element={
         <ProtectedRoute allowedRoles={['admin','viewer']}>
           <Dashboard />
@@ -170,7 +169,7 @@ function MainContent() {
 function Shell({ children }) {
   const location = useLocation();
   const { user, loading, authReady } = useAuth();
-  const isStandalone = location.pathname === '/403';
+  const isStandalone = false; // No standalone routes in Shell since all public routes are handled separately
   const navigate = useNavigate();
   
   React.useEffect(() => {
