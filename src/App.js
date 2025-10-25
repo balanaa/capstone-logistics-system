@@ -179,7 +179,7 @@ function Shell({ children }) {
   
   React.useEffect(() => {
     if (authReady && !loading && !user && !isStandalone) {
-      navigate('/403', { replace: true });
+      navigate('/login', { replace: true });
     }
   }, [authReady, loading, user, isStandalone, navigate]);
   
