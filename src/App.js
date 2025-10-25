@@ -62,8 +62,12 @@ function App() {
 function AppContent() {
   const location = useLocation();
   
+  // Debug logging
+  console.log('AppContent - Current pathname:', location.pathname);
+  
   // For public routes, don't use AuthProvider
   if (location.pathname === '/' || location.pathname === '/login' || location.pathname === '/camera' || location.pathname === '/reset-password' || location.pathname === '/403') {
+    console.log('AppContent - Using public routes for:', location.pathname);
     return (
       <Routes>
         <Route path="/" element={<LandingPage />} />
@@ -75,6 +79,7 @@ function AppContent() {
     );
   }
   
+  console.log('AppContent - Using AuthProvider for:', location.pathname);
   // For all other routes, use AuthProvider
   return (
     <AuthProvider>
