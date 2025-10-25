@@ -30,6 +30,7 @@ import { MobileProvider } from './context/MobileContext'
 import ProtectedRoute from './components/common/ProtectedRoute'
 import ErrorBoundary from './components/common/ErrorBoundary'
 import Loading from './components/common/Loading'
+import LandingPage from './pages/LandingPage'
 import Login from './pages/Auth/Login'
 import ResetPassword from './pages/Auth/ResetPassword'
 import Forbidden403 from './pages/Forbidden403'
@@ -65,7 +66,7 @@ function App() {
 function MainContent() {
   return (
     <Routes>
-      <Route path="/" element={<LandingRedirect />} />
+      <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<Login />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/403" element={<Forbidden403 />} />
@@ -163,7 +164,7 @@ function LandingRedirect() {
 function Shell({ children }) {
   const location = useLocation();
   const { user, loading, authReady } = useAuth();
-  const isStandalone = location.pathname === '/login' || location.pathname === '/403' || location.pathname === '/reset-password';
+  const isStandalone = location.pathname === '/login' || location.pathname === '/403' || location.pathname === '/reset-password' || location.pathname === '/';
   const navigate = useNavigate();
   
   React.useEffect(() => {
