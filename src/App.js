@@ -49,13 +49,9 @@ function App() {
       <ProDocumentListContext.Provider value={{ proDocumentList, setProDocumentList }}>
         <MobileProvider>
           <Router>
-            <AuthProvider>
-              <ErrorBoundary>
-                <Shell>
-                  <MainContent />
-                </Shell>
-              </ErrorBoundary>
-            </AuthProvider>
+            <ErrorBoundary>
+              <AppContent />
+            </ErrorBoundary>
           </Router>
         </MobileProvider>
       </ProDocumentListContext.Provider>
@@ -63,10 +59,26 @@ function App() {
   );
 }
 
+function AppContent() {
+  const location = useLocation();
+  
+  // For landing page, don't use AuthProvider
+  if (location.pathname === '/') {
+    return <LandingPage />;
+  }
+  
+  // For all other routes, use AuthProvider
+  return (
+    <AuthProvider>
+      <Shell>
+        <MainContent />
+      </Shell>
+    </AuthProvider>
+  );
+}
 function MainContent() {
   return (
     <Routes>
-      <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<Login />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/403" element={<Forbidden403 />} />
@@ -153,18 +165,10 @@ function MainContent() {
   );
 }
 
-function LandingRedirect() {
-  const { user, loading, roles, getLandingPath } = useAuth();
-  if (loading) return null;
-  if (!user) return <Navigate to="/login" replace />;
-  const to = getLandingPath(roles);
-  return <Navigate to={to} replace />;
-}
-
 function Shell({ children }) {
   const location = useLocation();
   const { user, loading, authReady } = useAuth();
-  const isStandalone = location.pathname === '/login' || location.pathname === '/403' || location.pathname === '/reset-password' || location.pathname === '/';
+  const isStandalone = location.pathname === '/login' || location.pathname === '/403' || location.pathname === '/reset-password';
   const navigate = useNavigate();
   
   React.useEffect(() => {
