@@ -380,7 +380,7 @@ export default function Log() {
                 
                 <div className="action-details">
                   <div className="action-user">
-                    👤 {getUserName(action)}
+                    👤 by {getUserName(action)}
                   </div>
                   
                   {/* Document actions */}
