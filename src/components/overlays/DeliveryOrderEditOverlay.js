@@ -314,7 +314,7 @@ export default function DeliveryOrderEditOverlay({
                       gap: '8px'
                     }}
                   >
-Upload File
+                    📁 Upload File
                   </label>
                   <button
                     type="button"
@@ -332,7 +332,7 @@ Upload File
                       gap: '8px'
                     }}
                   >
-Take a Picture
+                    📷 Take a Picture
                   </button>
                 </div>
 
