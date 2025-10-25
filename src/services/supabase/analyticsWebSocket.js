@@ -1,6 +1,7 @@
 // Analytics WebSocket Service
 // Real-time data updates for Analytics page using Supabase Realtime
 
+import React from 'react';
 import { supabase } from './supabaseClient';
 
 /**
@@ -390,6 +391,3 @@ export function useAnalyticsWebSocket(callbacks = {}) {
     analyticsWebSocket
   };
 }
-
-// Import React for the hook
-import React from 'react';
