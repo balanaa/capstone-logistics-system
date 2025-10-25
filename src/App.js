@@ -33,7 +33,6 @@ import Loading from './components/common/Loading'
 import LandingPage from './pages/LandingPage'
 import Login from './pages/Auth/Login'
 import ResetPassword from './pages/Auth/ResetPassword'
-import Forbidden403 from './pages/Forbidden403'
 import Header from './components/layout/Header'
 import Sidebar from './components/layout/Sidebar'
 
@@ -66,7 +65,7 @@ function AppContent() {
   console.log('AppContent - Current pathname:', location.pathname);
   
   // For public routes, don't use AuthProvider
-  if (location.pathname === '/' || location.pathname === '/login' || location.pathname === '/camera' || location.pathname === '/reset-password' || location.pathname === '/403') {
+  if (location.pathname === '/' || location.pathname === '/login' || location.pathname === '/camera' || location.pathname === '/reset-password') {
     console.log('AppContent - Using public routes for:', location.pathname);
     return (
       <Routes>
@@ -74,7 +73,6 @@ function AppContent() {
         <Route path="/login" element={<Login />} />
         <Route path="/camera" element={<Camera />} />
         <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/403" element={<Forbidden403 />} />
       </Routes>
     );
   }
