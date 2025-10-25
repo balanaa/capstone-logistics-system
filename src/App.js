@@ -62,12 +62,14 @@ function App() {
 function AppContent() {
   const location = useLocation();
   
-  // For landing page and login page, don't use AuthProvider
-  if (location.pathname === '/' || location.pathname === '/login') {
+  // For public routes, don't use AuthProvider
+  if (location.pathname === '/' || location.pathname === '/login' || location.pathname === '/camera' || location.pathname === '/reset-password') {
     return (
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/camera" element={<Camera />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
       </Routes>
     );
   }
@@ -84,11 +86,7 @@ function AppContent() {
 function MainContent() {
   return (
     <Routes>
-      <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/403" element={<Forbidden403 />} />
-      
-      {/* Camera route - public access for testing */}
-      <Route path="/camera" element={<Camera />} />
       
       <Route path="/dashboard" element={
         <ProtectedRoute allowedRoles={['admin','viewer']}>
@@ -172,7 +170,7 @@ function MainContent() {
 function Shell({ children }) {
   const location = useLocation();
   const { user, loading, authReady } = useAuth();
-  const isStandalone = location.pathname === '/403' || location.pathname === '/reset-password';
+  const isStandalone = location.pathname === '/403';
   const navigate = useNavigate();
   
   React.useEffect(() => {
