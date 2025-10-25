@@ -62,9 +62,14 @@ function App() {
 function AppContent() {
   const location = useLocation();
   
-  // For landing page, don't use AuthProvider
-  if (location.pathname === '/') {
-    return <LandingPage />;
+  // For landing page and login page, don't use AuthProvider
+  if (location.pathname === '/' || location.pathname === '/login') {
+    return (
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/login" element={<Login />} />
+      </Routes>
+    );
   }
   
   // For all other routes, use AuthProvider
@@ -79,7 +84,6 @@ function AppContent() {
 function MainContent() {
   return (
     <Routes>
-      <Route path="/login" element={<Login />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/403" element={<Forbidden403 />} />
       
@@ -168,7 +172,7 @@ function MainContent() {
 function Shell({ children }) {
   const location = useLocation();
   const { user, loading, authReady } = useAuth();
-  const isStandalone = location.pathname === '/login' || location.pathname === '/403' || location.pathname === '/reset-password';
+  const isStandalone = location.pathname === '/403' || location.pathname === '/reset-password';
   const navigate = useNavigate();
   
   React.useEffect(() => {
