@@ -6,6 +6,9 @@ import { ProDocumentListContext } from '../../App';
 import { fetchShipmentDocumentsByPro, fetchFieldsByDocumentId } from '../../services/supabase/documents'
 import { supabase } from '../../services/supabase/client'
 import { formatDateDisplay } from '../../utils/dateUtils'
+import CompletionConfirmOverlay from '../../components/overlays/CompletionConfirmOverlay'
+import { checkAllShipmentDocumentsComplete } from '../../utils/documentCompletionUtils'
+import { updateShipmentStatus } from '../../services/supabase/shipmentStatus'
 
 export default function ShipmentProfile() {
     const { proNo } = useParams();
@@ -14,10 +17,38 @@ export default function ShipmentProfile() {
     const [dbPro, setDbPro] = useState(null)
     const [loading, setLoading] = useState(false)
     const [reloadTick, setReloadTick] = useState(0)
+    const [showCompletionPrompt, setShowCompletionPrompt] = useState(false)
+    const [hasCheckedCompletion, setHasCheckedCompletion] = useState(false)
+
+    // Debug completion prompt state changes
+    useEffect(() => {
+        // console.log('🎭 [ShipmentProfile] Completion prompt state changed:', showCompletionPrompt)
+    }, [showCompletionPrompt])
 
     const handleBack = () => {
         navigate('/shipment');
     };
+
+    // Handle shipment completion confirmation
+    const handleShipmentCompletion = async (confirmed) => {
+        // console.log('🎯 [ShipmentProfile] Completion confirmation:', confirmed)
+        setShowCompletionPrompt(false)
+        
+        if (confirmed) {
+            try {
+                const { data: { user } } = await supabase.auth.getUser()
+                // console.log('💾 [ShipmentProfile] Updating status to completed for user:', user?.id)
+                await updateShipmentStatus(proNo, 'completed', user.id)
+                // console.log('✅ [ShipmentProfile] Status updated, navigating to /shipment')
+                navigate('/shipment')
+            } catch (error) {
+                console.error('❌ [ShipmentProfile] Error updating shipment status:', error)
+                alert('Failed to update status. Please try again.')
+            }
+        } else {
+            // console.log('❌ [ShipmentProfile] User declined completion')
+        }
+    }
 
     useEffect(() => {
         let mounted = true
@@ -41,7 +72,7 @@ export default function ShipmentProfile() {
                 const bestByType = Object.create(null)
                 // Debug: how many documents for this PRO
                 // eslint-disable-next-line no-console
-                console.log(`[Profile] PRO ${proNo}: fetched ${docs.length} documents`)
+                // console.log(`[Profile] PRO ${proNo}: fetched ${docs.length} documents`)
                 for (const d of docs) {
                     const fields = await fetchFieldsByDocumentId(d.id)
                     const fieldCount = Array.isArray(fields) ? fields.length : 0
@@ -58,7 +89,7 @@ export default function ShipmentProfile() {
                     }
                     
                     // eslint-disable-next-line no-console
-                    console.log(`[Profile] Document ${d.id} (${d.document_type}): fetched ${fieldCount} fields, ${lineItems.length} items`)
+                    // console.log(`[Profile] Document ${d.id} (${d.document_type}): fetched ${fieldCount} fields, ${lineItems.length} items`)
                     const current = bestByType[d.document_type]
                     const curCount = current?.__fieldCount || -1
                     const curUploaded = current?.__uploadedAt || ''
@@ -70,7 +101,7 @@ export default function ShipmentProfile() {
                     // Debug: show container_seal_pairs raw value if present
                     if (byKey['container_seal_pairs']) {
                       // eslint-disable-next-line no-console
-                      console.log('[Profile] pairs raw:', byKey['container_seal_pairs'].raw_value)
+                      // console.log('[Profile] pairs raw:', byKey['container_seal_pairs'].raw_value)
                     }
                     const labelRows = []
                     const push = (label, key, type = 'text') => {
@@ -93,6 +124,7 @@ export default function ShipmentProfile() {
                         push('Shipping Line', 'shipping_line')
                         push('Vessel Name', 'vessel_name')
                         push('Voyage No.', 'voyage_no')
+                        push('ETA', 'eta')
                         push('Port of Loading', 'port_of_loading')
                         push('Port of Discharge', 'port_of_discharge')
                         // Place of Delivery (derived but persisted/editable) should be above pairs
@@ -143,6 +175,7 @@ export default function ShipmentProfile() {
                           shipping_line: byKey['shipping_line']?.raw_value || '',
                           vessel_name: byKey['vessel_name']?.raw_value || '',
                           voyage_no: byKey['voyage_no']?.raw_value || '',
+                          eta: byKey['eta']?.raw_value || '',
                           port_of_loading: byKey['port_of_loading']?.raw_value || '',
                           port_of_discharge: byKey['port_of_discharge']?.raw_value || '',
                           place_of_delivery: byKey['place_of_delivery']?.raw_value || '',
@@ -175,6 +208,49 @@ export default function ShipmentProfile() {
                           total_net_weight: byKey['total_net_weight']?.value_number ?? '',
                           total_gross_weight: byKey['total_gross_weight']?.value_number ?? ''
                         }
+                    } else if (d.document_type === 'delivery_order') {
+                        // Delivery Order fields
+                        push('Pickup Location', 'pickup_location')
+                        push('Empty Return Location', 'empty_return_location')
+                        push('Registry Number', 'registry_number')
+                        push('Detention Free Time End', 'detention_free_time_end')
+                        
+                        // Container/Seal Pairs for Delivery Order (separate but connected styling)
+                        const pairsRaw = byKey['container_seal_pairs']?.raw_value
+                        if (pairsRaw !== undefined && pairsRaw !== null) {
+                          let arr = []
+                          if (typeof pairsRaw === 'string') {
+                            try { arr = JSON.parse(pairsRaw) } catch (_e) {
+                              if (pairsRaw.trim()) labelRows.push({ label: 'Container No. / Seal No.', info: pairsRaw.trim() })
+                              arr = []
+                            }
+                          } else if (Array.isArray(pairsRaw)) {
+                            arr = pairsRaw
+                          } else if (typeof pairsRaw === 'object') {
+                            if (Array.isArray(pairsRaw.value)) arr = pairsRaw.value
+                          }
+                          if (Array.isArray(arr)) {
+                            if (arr.length === 0) {
+                              fieldValues.container_seal_pairs = [{ containerNo: '', sealNo: '' }]
+                              labelRows.push({ label: 'Container No. / Seal No.', info: '--' })
+                            } else {
+                              fieldValues.container_seal_pairs = arr
+                              const pairsText = arr.map(p => {
+                                const c = (p?.containerNo || '').toString().trim()
+                                const s = (p?.sealNo || '').toString().trim()
+                                return [c, s].filter(Boolean).join(' / ') || '--'
+                              }).join('\n')
+                              labelRows.push({ label: 'Container No. / Seal No.', info: pairsText })
+                            }
+                          }
+                        }
+                        
+                        fieldValues = {
+                          pickup_location: byKey['pickup_location']?.raw_value || '',
+                          empty_return_location: byKey['empty_return_location']?.raw_value || '',
+                          registry_number: byKey['registry_number']?.raw_value || '',
+                          detention_free_time_end: byKey['detention_free_time_end']?.raw_value || ''
+                        }
                     }
                     
                     // Convert line items to display format
@@ -197,7 +273,7 @@ export default function ShipmentProfile() {
                     
                     // Debug: count of pair rows in labelRows
                     // eslint-disable-next-line no-console
-                    console.log('[Profile] pair rows count:', labelRows.filter(r => r.label === 'Container No. / Seal No.').length)
+                    // console.log('[Profile] pair rows count:', labelRows.filter(r => r.label === 'Container No. / Seal No.').length)
                     // Add metadata to fieldValues for overlay display
                     fieldValues.uploaded_by = d.uploaded_by
                     fieldValues.uploaded_at = d.uploaded_at
@@ -230,6 +306,57 @@ export default function ShipmentProfile() {
         return () => { mounted = false }
     }, [proNo, reloadTick])
 
+    // Check for completion after data loads
+    useEffect(() => {
+        if (!dbPro?.documents) {
+            return
+        }
+        
+        // Reset completion check flag when reloadTick changes (new data loaded)
+        if (reloadTick > 0) {
+            setHasCheckedCompletion(false)
+        }
+        
+        // Only check once per page load to avoid showing prompt multiple times
+        if (hasCheckedCompletion) {
+            return
+        }
+        
+        // Check if all 4 documents exist (with fields)
+        const isComplete = checkAllShipmentDocumentsComplete(dbPro.documents)
+        // console.log('📋 [ShipmentProfile] Document completion check:', {
+        //     documentCount: dbPro.documents.length,
+        //     documentTypes: dbPro.documents.map(d => d.type),
+        //     isComplete
+        // })
+        
+        if (isComplete) {
+            // Fetch current status from pro table to avoid repeat prompts
+            const checkStatus = async () => {
+                // console.log('🔍 [ShipmentProfile] Checking current status in database...')
+                const { data } = await supabase
+                    .from('pro')
+                    .select('status')
+                    .eq('pro_number', proNo)
+                    .single()
+                
+                // console.log('📊 [ShipmentProfile] Current status:', data?.status)
+                
+                if (data?.status !== 'completed') {
+                    // console.log('✅ [ShipmentProfile] Showing completion prompt!')
+                    setShowCompletionPrompt(true)
+                } else {
+                    // console.log('⏭️ [ShipmentProfile] Status already completed, no prompt')
+                }
+                setHasCheckedCompletion(true)
+            }
+            checkStatus()
+        } else {
+            // console.log('❌ [ShipmentProfile] Not complete yet, documents missing')
+            setHasCheckedCompletion(true)
+        }
+    }, [dbPro, proNo, reloadTick])
+
     const effectiveList = useMemo(() => {
         if (dbPro) return [dbPro]
         return proDocumentList
@@ -242,6 +369,7 @@ export default function ShipmentProfile() {
                 proNo={proNo} 
                 onBack={handleBack} 
                 documents={dbPro?.documents || []}
+                onStatusChange={() => setReloadTick(t => t + 1)}
             />
             <div style={{ overflowY: 'auto', paddingRight: 8 }}>
                 <Department 
@@ -253,6 +381,14 @@ export default function ShipmentProfile() {
                 />
                 {loading && <div style={{ padding: 8, color: '#666' }}>Loading…</div>}
             </div>
+            
+                <CompletionConfirmOverlay
+                    isOpen={showCompletionPrompt}
+                    heading="Shipment Complete"
+                    bodyText={`All required documents have been uploaded and filled.\nWould you like to mark PRO number: ${proNo} as Complete?\nThis will move it to the Trucking department.`}
+                    onConfirm={() => handleShipmentCompletion(true)}
+                    onCancel={() => handleShipmentCompletion(false)}
+                />
         </div>
     );
 }

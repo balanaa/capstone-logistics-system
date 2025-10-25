@@ -38,9 +38,9 @@ export function formatDateDisplay(dateValue) {
 }
 
 /**
- * Format a timestamp to display date and time
+ * Format a timestamp to display date and time in Singapore timezone (UTC+8)
  * Examples:
- * - "2025-02-20T15:45:30.000Z" → "February 20, 2025 at 3:45 PM"
+ * - "2025-02-20T15:45:30.000Z" → "February 20, 2025 at 11:45 PM" (Singapore time)
  * @param {string|Date} timestamp - ISO timestamp or Date object
  * @returns {string} Formatted datetime string
  */
@@ -48,11 +48,23 @@ export function formatDateTime(timestamp) {
   if (!timestamp) return ''
   
   try {
+    // If timestamp doesn't have 'Z', treat it as local time
+    const isLocalTime = !timestamp.endsWith('Z')
     const date = new Date(timestamp)
     if (isNaN(date.getTime())) return timestamp
 
-    const dateOptions = { year: 'numeric', month: 'long', day: 'numeric' }
-    const timeOptions = { hour: 'numeric', minute: '2-digit', hour12: true }
+    const dateOptions = { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric',
+      timeZone: isLocalTime ? undefined : 'Asia/Singapore' // Use local timezone if no Z
+    }
+    const timeOptions = { 
+      hour: 'numeric', 
+      minute: '2-digit', 
+      hour12: true,
+      timeZone: isLocalTime ? undefined : 'Asia/Singapore' // Use local timezone if no Z
+    }
     
     const datePart = date.toLocaleDateString('en-US', dateOptions)
     const timePart = date.toLocaleTimeString('en-US', timeOptions)

@@ -1,87 +1,129 @@
-import { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import TruckingPieChart from "../../components/PieCharts/TruckingPieChart";
-import Department from '../../components/Department';
-import { ProfileContext, ProDocumentListContext } from '../../App';
-import { TruckingProfileHeader } from '../../components/ProfileHeader';
-import '../Shipment/ShipmentTable.css';
+import ContainerStatusPieChart from "../../components/PieCharts/ContainerStatusPieChart";
+import DepartmentMain from '../../components/departments/DepartmentMain';
+import { ProDocumentListContext } from '../../App';
+import { getTruckingTableData, getConsigneeNameForPro } from '../../services/supabase/truckingStatus';
 
-function TruckingProfile({ proNo, proDocumentList, setProDocumentList, onBack }) {
+// Component for the 2 charts in dept-top (RemindersPanel is the 3rd sibling)
+function TruckingTopCharts() {
     return (
-        <div>
-            <TruckingProfileHeader proNo={proNo} onBack={onBack} />
-            <div style={{ overflowY: 'auto', paddingRight: 8 }}>
-                <Department 
-                    name="trucking"
-                    proNo={proNo}
-                    proDocumentList={proDocumentList}
-                    setProDocumentList={setProDocumentList}
-                />
-            </div>
-        </div>
+        <>
+            <ContainerStatusPieChart />
+            <TruckingPieChart />
+        </>
     );
 }
 
+
 const Trucking = () => {
-    const [profileProNo, setProfileProNo] = useState(null);
-    const { setProfile } = useContext(ProfileContext);
-    const { proDocumentList, setProDocumentList } = useContext(ProDocumentListContext);
-    const [search, setSearch] = useState('');
+    const navigate = useNavigate();
+    const { proDocumentList } = useContext(ProDocumentListContext);
+    
+    // Table data state
+    const [tableData, setTableData] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [tableError, setTableError] = useState(null);
 
-    const proNumbers = proDocumentList.map(pro => pro.proNo).filter(proNo => proNo.toLowerCase().includes(search.toLowerCase()));
-
-    useEffect(() => {
-        if (profileProNo) {
-            setProfile && setProfile({ department: 'trucking', proNo: profileProNo });
-        } else {
-            setProfile && setProfile(null);
+    // Mock reminders data for Trucking - Storage and Detention warnings
+    const truckingReminders = [
+        {
+            title: 'Storage Warning',
+            proNo: '2025001',
+            deadline: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString() // 1 day from now
+        },
+        {
+            title: 'Detention Warning',
+            proNo: '2025002',
+            deadline: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString() // 3 days from now
+        },
+        {
+            title: 'Storage Warning',
+            proNo: '2025003',
+            deadline: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString() // 5 days from now
+        },
+        {
+            title: 'Detention Warning',
+            proNo: '2025004',
+            deadline: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString() // 2 days from now
         }
-    }, [profileProNo, setProfile]);
+    ];
+
+    // Load trucking table data
+    useEffect(() => {
+        const loadTableData = async () => {
+            try {
+                setLoading(true);
+                const data = await getTruckingTableData();
+                
+                // Enhance data with consignee names
+                const enhancedData = await Promise.all(
+                    data.map(async (row) => {
+                        console.log(`[Trucking] Processing row for PRO ${row.proNo}:`, row);
+                        const consigneeName = await getConsigneeNameForPro(row.proNo);
+                        console.log(`[Trucking] Enhanced consigneeName for PRO ${row.proNo}:`, consigneeName);
+                        return { ...row, consigneeName };
+                    })
+                );
+                
+                console.log('[Trucking] Final enhanced data:', enhancedData);
+                setTableData(enhancedData);
+                setTableError(null);
+            } catch (err) {
+                console.error('Error loading trucking data:', err);
+                setTableError('Failed to load trucking data');
+                setTableData([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+        
+        loadTableData();
+    }, [proDocumentList]);
+
+
+    const handleAddRecord = () => {
+        // For now, just show a message - this could navigate to a form
+        alert('Add new trucking record functionality will be implemented');
+    };
+
+    const handleRowClick = (row) => {
+        navigate(`/trucking/pro-number/${row.proNo}`);
+    };
+
+    // Define columns for the trucking table
+    const columns = [
+        { key: 'proNo', label: 'PRO No' },
+        { key: 'consigneeName', label: 'Consignee' },
+        { key: 'portOfDischarge', label: 'Port of Discharge' },
+        { key: 'placeOfDelivery', label: 'Place of Delivery' },
+        { key: 'shippingLine', label: 'Shipping Line' },
+        { key: 'containerNoSealNo', label: 'Container No Seal No' },
+        { key: 'emptyReturnLocation', label: 'Empty Return Location' },
+        { key: 'detentionStart', label: 'Detention Start' },
+        { key: 'createdOn', label: 'Created On' },
+        { key: 'status', label: 'Status' }
+    ];
 
     return (
-        <div>
-            {!profileProNo && <TruckingPieChart />}
-            {profileProNo ? (
-                <TruckingProfile 
-                    proNo={profileProNo} 
-                    proDocumentList={proDocumentList}
-                    setProDocumentList={setProDocumentList}
-                    onBack={() => setProfileProNo(null)}
-                />
-            ) : (
-                <div className="shipment-table-container">
-                    <div className="shipment-table-header-row">
-                        <h2 className="shipment-table-title">Trucking List</h2>
-                        <button className="shipment-table-add-btn">
-                            <span style={{ fontWeight: 'bold', fontSize: '1.2em' }}>+</span> Create New Record
-                        </button>
-                        <input
-                            className="shipment-table-search"
-                            placeholder="Search"
-                            value={search}
-                            onChange={e => setSearch(e.target.value)}
-                        />
-                    </div>
-                    <table className="shipment-table">
-                        <thead>
-                            <tr>
-                                <th style={{ width: '120px' }}>Profile</th>
-                                <th>PRO Number</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {proNumbers.map((proNo) => (
-                                <tr key={proNo}>
-                                    <td>
-                                        <button onClick={() => setProfileProNo(proNo)} className="shipment-table-profile-btn">Profile</button>
-                                    </td>
-                                    <td>{proNo}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            )}
-        </div>
+        <DepartmentMain
+            title="Trucking"
+            PieChartComponent={TruckingTopCharts} // Custom component with 3 charts
+            reminders={truckingReminders}
+            columns={columns}
+            rows={tableData}
+            onAdd={handleAddRecord}
+            showAddButton={false}
+            routePrefix="/trucking"
+            loading={loading}
+            proKey="proNo"
+            dateField="createdOn"
+            searchKeys={['proNo', 'consigneeName', 'portOfDischarge', 'placeOfDelivery']}
+            rowsPerPage={10}
+            onOpenProfile={handleRowClick}
+            isTruckingThreeCharts={true}
+        />
     );
 };
 

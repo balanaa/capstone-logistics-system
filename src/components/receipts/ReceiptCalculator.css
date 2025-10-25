@@ -1,0 +1,391 @@
+/* Receipt Calculator Styles - Converted from finance.css */
+
+:root {
+  --primary-color: #005CAB;
+  --secondary-color: #9EDCEE;
+  --lighter-color: #DCEEF3;
+  --background-color: #FFFFFF;
+  --highlight-color: #53B7FF;
+  --primary-text-color: #535353;
+  --secondary-text-color: #7E7C7C;
+  --card-radius: 10px;
+  --gap: 12px;
+}
+
+.receipt-calculator {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  color: var(--primary-text-color);
+}
+
+.receipt-calculator .groups {
+  display: grid;
+  gap: 12px;
+}
+
+.receipt-calculator .group {
+  background: var(--lighter-color);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.receipt-calculator .group-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.receipt-calculator .group-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--primary-text-color);
+  background: transparent;
+  border: 1px dashed rgba(0,0,0,0.06);
+  padding: 8px 10px;
+  border-radius: 8px;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  outline: none;
+  cursor: text;
+  flex: 1;
+}
+
+.receipt-calculator .group-title:focus {
+  border: 1px solid var(--primary-color);
+  background: linear-gradient(90deg, rgba(82,141,229,0.06), rgba(83,183,255,0.02));
+}
+
+.receipt-calculator .group-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.receipt-calculator .rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.receipt-calculator .add-area {
+  margin-top: 8px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.receipt-calculator .row {
+  display: grid;
+  grid-template-columns: 40px 1fr 200px;
+  gap: 8px;
+  align-items: center;
+}
+
+.receipt-calculator .del-wrap {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.receipt-calculator .del {
+  border-radius: 8px;
+  border: none;
+  background-color: #C62828;
+  color: white;
+  width: 34px;
+  height: 34px;
+  cursor: pointer;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.receipt-calculator .del:hover {
+  background-color: #FFCDD2;
+  color: #C62828;
+  cursor: pointer;
+}
+
+.receipt-calculator .label {
+  padding: 8px 10px;
+  border-radius: 8px;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  outline: none;
+  cursor: text;
+  color: var(--primary-text-color);
+  border: 1px dashed rgba(0,0,0,0.06);
+  background: transparent;
+}
+
+.receipt-calculator .label:focus {
+  border: 1px solid var(--primary-color);
+  background: linear-gradient(90deg, rgba(82,141,229,0.06), rgba(83,183,255,0.02));
+}
+
+.receipt-calculator .child-row {
+  padding-left: 28px;
+}
+
+.receipt-calculator .child-row .label {
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+.receipt-calculator .right-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.receipt-calculator .value {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(0,0,0,0.08);
+  min-height: 38px;
+  text-align: right;
+  font-weight: 600;
+  font-family: inherit;
+}
+
+.receipt-calculator .percent-input {
+  width: 80px;
+  text-align: right;
+  padding: 6px 8px;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 6px;
+  font-weight: 700;
+  background: white;
+  font-family: inherit;
+}
+
+.receipt-calculator .withholding-base {
+  width: 120px;
+}
+
+.receipt-calculator .summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+  padding: 12px 8px;
+  border-top: 1px dashed rgba(0,0,0,0.05);
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.receipt-calculator .summary .label {
+  font-weight: 700;
+  color: var(--primary-text-color);
+  border: none;
+  background: transparent;
+  cursor: default;
+  flex: 1;
+  font-size: 15px;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.receipt-calculator .summary .value {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--primary-color);
+  border: none;
+  background: transparent;
+  cursor: default;
+  flex: 1;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.receipt-calculator .del-group-btn {
+  border-radius: 8px;
+  border: none;
+  background-color: #C62828;
+  color: white;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-align: center;
+  
+  width: 100%;
+}
+
+.receipt-calculator .del-group-btn:hover {
+  background-color: #FFCDD2;
+  color: #C62828;
+  cursor: pointer;
+}
+
+.receipt-calculator .add {
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+  display: block;
+  width: 100%;
+  text-align: center;
+}
+
+/* Computed VAT block styles */
+.receipt-calculator .computed-block {
+  margin-top: 12px;
+  background: #fff;
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid rgba(0,0,0,0.04);
+}
+
+.receipt-calculator .computed-title {
+  font-weight: 700;
+  color: var(--primary-color);
+  margin-bottom: 8px;
+}
+
+.receipt-calculator .computed-table {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.receipt-calculator .computed-cell {
+  background: var(--lighter-color);
+  padding: 10px;
+  border-radius: 8px;
+  min-height: 120px;
+}
+
+.receipt-calculator .pair {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.receipt-calculator .pair .lbl {
+  font-weight: 600;
+}
+
+.receipt-calculator .pair input,
+.receipt-calculator .pair .readonly {
+  width: 180px;
+  max-width: 100%;
+  text-align: right;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(0,0,0,0.08);
+  background: white;
+  font-weight: 700;
+}
+
+.receipt-calculator .pair .readonly {
+  background: transparent;
+  border: none;
+  color: var(--primary-text-color);
+  font-weight: 800;
+}
+
+.receipt-calculator .pair-3 {
+  display: grid;
+  grid-template-columns: 0.08fr 0.16fr 1fr;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.receipt-calculator .pair-3 .lbl {
+  font-weight: 600;
+}
+
+.receipt-calculator .pair-3 .readonly {
+  background: transparent;
+  border: none;
+  text-align: right;
+  font-weight: 800;
+  color: var(--primary-text-color);
+  padding-right: 0.6rem;
+}
+
+.receipt-calculator .left-checkbox {
+  width: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.receipt-calculator .left-checkbox input {
+  width: 16px;
+  height: 16px;
+}
+
+.receipt-calculator .total-due {
+  font-weight: 800;
+  font-size: 16px;
+  color: var(--primary-color);
+}
+
+/* Responsive */
+@media (max-width: 820px) {
+  .receipt-calculator .row {
+    grid-template-columns: 40px 1fr 160px;
+  }
+  .receipt-calculator .computed-table {
+    grid-template-columns: 1fr;
+  }
+  .receipt-calculator .summary {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    text-align: center;
+  }
+  .receipt-calculator .summary .label {
+    text-align: center;
+    white-space: normal;
+  }
+  .receipt-calculator .summary .value {
+    text-align: center;
+  }
+}
+
+@media (max-width: 640px) {
+  .receipt-calculator .row {
+    grid-template-columns: 40px 1fr 140px;
+  }
+}
+
+@media (max-width: 520px) {
+  .receipt-calculator .row {
+    grid-template-columns: 40px 1fr;
+  }
+  .receipt-calculator .row .value {
+    order: 3;
+    margin-top: 6px;
+  }
+  .receipt-calculator .row .label {
+    order: 2;
+  }
+  .receipt-calculator .row .del-wrap {
+    order: 1;
+  }
+  .receipt-calculator .rows {
+    gap: 10px;
+  }
+}

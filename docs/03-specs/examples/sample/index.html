@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>(not ah)</title>
+<link rel="stylesheet" href="finance.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Summation Calculator</h1>
+      <div class="controls muted">Tip: click label to edit — type numbers (dot and minus allowed). Values format on blur.</div>
+    </header>
+
+    <div class="parents">
+
+      <!-- Parent Test 1 -->
+      <section class="parent" data-parent="test1">
+        <div class="parent-header">
+          <h2>Statement of Account</h2>
+          <button class="add-group-btn" data-add-group>+ Add Group</button>
+        </div>
+
+        <div class="groups" data-groups>
+          <!-- groups will be created by JS from DEFAULTS -->
+        </div>
+
+        <div class="summary" style="margin-top:12px;">
+          <div class="label">Total - Statement of Account</div>
+          <div class="value" id="parentTotal1">0.00</div>
+        </div>
+        
+      <button onclick="downloadParentAsDoc('test1', 'Statement of Accounts.doc')" class="export-word">Export to Word</button>
+      </section>
+
+      <!-- Parent Test 2 -->
+      <section class="parent" data-parent="test2">
+        <div class="parent-header">
+          <h2>Service Invoice</h2>
+          <button class="add-group-btn" data-add-group>+ Add Group</button>
+        </div>
+
+        <div class="groups" data-groups>
+          <!-- groups will be created by JS from DEFAULTS -->
+        </div>
+
+        
+        <!-- START: Totals & Taxes -->
+  <h2>Totals & Taxes</h2>
+
+  <div class="computed-table">
+    <!-- Column 1 -->
+    <div class="computed-cell">
+      <div class="pair">
+        <div class="lbl">VATable Sales <span class="muted small">(from Service Charges)</span></div>
+        <div class="readonly" id="VATableSales">0.00</div>
+      </div>
+      <div class="pair-3">
+        <div class="lbl">VAT</div>
+        <input id="VATPercent" class="percent-input" type="text" value="12%" />
+        <div class="readonly" id="VATValue">0.00</div>
+      </div>
+
+      <div class="pair">
+        <div class="left-checkbox"><input type="checkbox" id="VATExemptCheck" aria-label="VAT Exempt" /></div>
+        <div class="lbl">VAT Exempt Sales</div>
+        <input id="VATExempt" class="value" value="0.00" />
+      </div>
+    </div>
+
+    <!-- Column 2 -->
+        <div class="computed-cell">
+            <div class="pair">
+                <div class="lbl">Total Sales (Vat Inc.)</div>
+                <div class="readonly" id="TotalSales_VatInc">0.00</div>
+            </div>
+
+            <div class="pair">
+                <div class="lbl">Less: Vat</div>
+                <div class="readonly" id="Less_Vat">0.00</div>
+            </div>
+
+            <div class="pair">
+                <div class="lbl">Amount — Net of Vat</div>
+                <div class="readonly" id="Amount_NetOfVat">0.00</div>
+            </div>
+
+            <div class="pair">
+                <div class="lbl">Add: VAT</div>
+                <div class="readonly" id="Add_VAT">0.00</div>
+            </div>
+
+      <div class="pair">
+    <div class="left-checkbox"><input type="checkbox" id="WithholdingToggle" checked aria-label="Withholding Auto" /></div>
+    <div class="lbl">Less: Withholding Tax</div>
+    <input id="WithholdingTax" class="value" value="0.00" />
+      </div>
+
+            <div class="pair total-due">
+                <div class="lbl">TOTAL AMOUNT DUE</div>
+                <div class="readonly" id="TOTAL_AMOUNT_DUE">0.00</div>
+        </div>
+  </div>
+    </div><button onclick="downloadParentAsDoc('test2', 'Service Invoice.doc')" class="export-word">Export to Word</button>
+    <div class="summary" style="margin-top:12px;">
+          <div class="label">Total - Service Invoice</div>
+          <div class="value" id="parentTotal2">0.00</div>
+        </div>
+     </div>
+</div>
+    
+<!-- END: Totals & Taxes -->
+      </section>
+
+
+
+      <div class="grand">
+        <div>Grand Total (Test 1 + Test 2)</div>
+        <div id="grandTotal">0.00</div>
+          
+
+      <div class="bottom-bar">
+        <button id="resetBtn" class="secondary">Reset to defaults</button>
+        <button id="exportBtn" class="ghost">Export JSON</button>
+      </div>
+
+    </div>
+
+    <footer style="padding:8px 0;color:var(--secondary-text-color);font-size:13px">
+      Built to your spec — inline label editing, comma formatting on blur, numeric-only typing (dot & minus allowed), add/remove rows, group & parent totals.
+    </footer>
+  </div>
+<script src="f.js"></script>
+</body>
+</html>

@@ -98,12 +98,18 @@ export default function CreateUserModal({ onClose, onSuccess }) {
         throw new Error('Failed to create user')
       }
       
-      // Update profile with full_name
+      // Update profile with full_name and department roles
+      const departmentRoles = []
+      if (formData.shipment !== 'no_access') departmentRoles.push('shipment')
+      if (formData.trucking !== 'no_access') departmentRoles.push('trucking')
+      if (formData.finance !== 'no_access') departmentRoles.push('finance')
+      if (formData.shipment_approval !== 'no_access') departmentRoles.push('verifier')
+      
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
           full_name: formData.full_name.trim(),
-          roles: formData.shipment_approval !== 'no_access' ? ['verifier'] : []
+          roles: departmentRoles
         })
         .eq('id', authData.user.id)
       

@@ -28,7 +28,7 @@ Purpose: support uploads for Shipment department documents (BOL, Invoice, Packin
 
 - id UUID PK default gen_random_uuid()
 - document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE
-- canonical_key TEXT NOT NULL -- e.g., 'consignee_name','consignee_address','eta'
+- canonical_key TEXT NOT NULL -- e.g., 'consignee_name','consignee_address','eta' (ETA field supports General Info input)
 - raw_label TEXT
 - raw_value TEXT
 - normalized_value TEXT -- trimmed/case-normalized for comparisons (e.g., punctuation-stripped, uppercased)
@@ -114,6 +114,18 @@ Purpose: support uploads for Shipment department documents (BOL, Invoice, Packin
 - resolved_at TIMESTAMP NULL
 - created_at TIMESTAMP DEFAULT now()
 
+### shipment_remarks (shipment-level remarks visible to permitted viewers)
+
+- id UUID PK default gen_random_uuid()
+- pro_number TEXT NOT NULL REFERENCES pro(pro_number) ON DELETE CASCADE
+- remark_date DATE NOT NULL -- stored as DATE; UI shows MM/DD/YY
+- notes TEXT NOT NULL
+- created_by UUID NOT NULL REFERENCES auth.users(id)
+- created_at TIMESTAMP DEFAULT now()
+- updated_by UUID NULL REFERENCES auth.users(id)
+- updated_at TIMESTAMP NULL
+- INDEX(pro_number, created_at)
+
 ## Flows (Escalate)
 
 - Upload with conflicts:
@@ -126,7 +138,19 @@ Purpose: support uploads for Shipment department documents (BOL, Invoice, Packin
 - Replace file:
   - Delete prior storage file; upload new; update file_path; re-validate values; log replace_file
 - Delete document:
+
   - Hard delete: remove storage + DB rows; log delete_document
+
+- Remarks (shipment-level):
+
+  - Add remark: insert into shipment_remarks; log actions_log with action='add_remark', target_type='shipment', target_id=pro_number
+  - Update remark: update shipment_remarks; log action='update_remark'
+  - Delete remark: delete shipment_remarks; log action='delete_remark'
+
+- ETA Management (General Info):
+  - Update ETA: delete existing eta field, insert new eta field in document_fields; update local cache; trigger refresh
+  - ETA field: canonical_key='eta', stored on Bill of Lading document, supports MM/DD/YY format
+  - Auto-save: triggers on input blur event, shows loading indicator during save
 
 ## SQL (PostgreSQL snippets)
 
@@ -231,6 +255,17 @@ create table if not exists document_issues (
   created_at timestamp default now()
 );
 
+create table if not exists shipment_remarks (
+  id uuid primary key default gen_random_uuid(),
+  pro_number text not null references pro(pro_number) on delete cascade,
+  remark_date date not null,
+  notes text not null,
+  created_by uuid not null references auth.users(id),
+  created_at timestamp default now(),
+  updated_by uuid references auth.users(id),
+  updated_at timestamp
+);
+
 -- Recommended indexes
 create index if not exists idx_documents_pro_type on documents (pro_number, document_type);
 create index if not exists idx_fields_doc_key on document_fields (document_id, canonical_key);
@@ -239,6 +274,8 @@ create index if not exists idx_conflicts_doc on document_conflicts (document_id)
 create index if not exists idx_item_conflicts_doc_line on document_item_conflicts (document_id, line_no);
 create index if not exists idx_issues_pro_doc on document_issues (pro_number, document_id);
 create index if not exists idx_label_map_lookup on label_mappings (department, document_type, raw_label);
+
+create index if not exists idx_shipment_remarks_pro_created on shipment_remarks (pro_number, created_at);
 
 create table if not exists label_mappings (
   id uuid primary key default gen_random_uuid(),
@@ -271,3 +308,4 @@ create table if not exists document_item_conflicts (
 - Enable RLS on all tables.
 - documents/doc_fields/doc_items/doc_conflicts: shipment role can insert/select/update/delete for department='shipment'; verifier/admin same; viewer select limited fields via views.
 - Use `profiles.roles` to gate roles.
+- shipment_remarks: viewers with permission to view shipment can select remarks by pro_number; editors (uploader/verifier/admin) can insert/update/delete within permitted shipments.

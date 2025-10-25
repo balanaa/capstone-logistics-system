@@ -10,11 +10,21 @@ export default function DepartmentMain({
   columns = [],
   rows = [],
   onAdd,
-  routePrefix = ''
+  showAddButton = true,
+  routePrefix = '',
+  loading = false,
+  isTruckingThreeCharts = false, // Special prop for trucking layout
+  // Additional props for TableList
+  proKey = 'proNo',
+  dateField = 'createdOn',
+  searchKeys = null,
+  rowsPerPage = 10,
+  onOpenProfile = null,
+  showTypeDropdown = false,
 }) {
   return (
     <div className="dept-main">
-      <div className="dept-top">
+      <div className={`dept-top ${isTruckingThreeCharts ? 'trucking-three-charts' : ''}`}>
         {/* Render the provided chart window directly (no extra card) */}
         {PieChartComponent ? <PieChartComponent /> : null}
         <RemindersPanel title={'Reminders'} reminders={reminders} />
@@ -25,7 +35,15 @@ export default function DepartmentMain({
         columns={columns}
         data={rows}
         onAdd={onAdd}
+        showAddButton={showAddButton}
         routePrefix={routePrefix}
+        loading={loading}
+        proKey={proKey}
+        dateField={dateField}
+        searchKeys={searchKeys}
+        rowsPerPage={rowsPerPage}
+        onOpenProfile={onOpenProfile}
+        showTypeDropdown={showTypeDropdown}
       />
     </div>
   )

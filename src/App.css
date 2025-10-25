@@ -184,48 +184,5 @@ main {
 
 
 /* MOBILE RESPONSIVE */
-@media (max-width: 700px) {
-  /* Add these 3 new rules */
-  .App {
-    grid-template-areas: 
-      "header"
-      "main";
-    overflow-x: hidden; /* Prevent horizontal scroll */
-  }
-
-  main {
-    width: 100vw; /* Force full viewport width */
-    padding: 1rem; /* Adjust horizontal padding */
-    margin-left: 0;
-    margin-bottom: var(--mobile-aside-height);
-  }
-
-  /* Keep existing mobile styles below */
-  .App {
-    grid-template-columns: 1fr;
-    padding-top: 0;
-  }
-
-  header {
-    position: relative;
-    width: 100%;
-  }
-
-  header h3.current-tab {
-    margin-left: 1rem;
-  }
-
-  aside {
-    width: 100vw;
-    height: var(--mobile-aside-height);
-    top: auto;
-    bottom: 0;
-    padding: 0;
-  }
-
-
-  aside ul li a {
-    width: calc(var(--mobile-aside-height) * 1.5);
-    height: var(--mobile-aside-height);
-  }
-}
+/* Note: Mobile sidebar positioning is now handled by mobile.css for actual mobile devices */
+/* Desktop users with small screens will keep the vertical sidebar */

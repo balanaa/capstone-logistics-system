@@ -34,49 +34,72 @@ header h2.current-tab {
 
 .header-icons ul {
   display: flex;
-  gap: 0.6rem;
+  align-items: center;
+  gap: 0.1rem;
   margin-left: auto;
   padding: 0;
+  list-style: none;
+  height: 100%;
 }
 
-  /* Header icon styling */
-  .header-icons ul li a i {
-    color: white;
-    font-size: 1.2rem;
-  }
-
-  /* Ensure icon buttons look like icons but remain clickable */
-  .header-icons ul li .icon-button {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0;
-    line-height: 1;
-  }
-
-  .header-icons ul li .icon-button i {
-    color: white;
-    font-size: 1.2rem;
-  }
-
-  .header-icons ul li a:hover i {
-    color: var(--secondary-color);
-  }
-
-  .header-icons ul li .icon-button:hover i {
-    color: var(--secondary-color);
-  }
-
-/* MOBILE RESPONSIVE */
-@media (max-width: 700px) {
-  header {
-    position: relative;
-    width: 100%;
-  }
-
-  header h3.current-tab {
-    margin-left: 1rem;
-  }
+/* Header icon styling */
+.header-icons ul li {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
 }
+
+.header-icons ul li a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.3rem;
+  text-decoration: none;
+}
+
+.header-icons ul li a i {
+  color: white;
+  font-size: 1.2rem;
+  vertical-align: middle;
+}
+
+/* Ensure icon buttons look like icons but remain clickable */
+.header-icons ul li .icon-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.3rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header-icons ul li .icon-button i {
+  color: white;
+  font-size: 1.2rem;
+  vertical-align: middle;
+}
+
+.header-icons ul li a:hover i {
+  color: var(--secondary-color);
+}
+
+.header-icons ul li .icon-button:hover i {
+  color: var(--secondary-color);
+}
+
+/* Logout button styling - red color */
+.header-icons ul li .icon-button[aria-label="Logout"] i {
+  color: #ff4444;
+}
+
+.header-icons ul li .icon-button[aria-label="Logout"]:hover i {
+  color: #ff6666;
+}
+
+/* Desktop responsive adjustments - removed problematic media query */
+/* Mobile styles are handled in mobile.css with .mobile-device class */
 
 

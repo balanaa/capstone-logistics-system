@@ -261,4 +261,542 @@
 .shipment-header-search i {
     font-size: 1rem;
     color: #666;
+}
+
+/* Buttons container - display buttons side by side on all screen sizes */
+.shipment-header-buttons {
+    display: flex;
+    gap: 0.5rem;
+    width: 100%;
+}
+
+/* Status Dropdown Styles */
+.status-dropdown-container {
+    position: relative;
+    display: inline-block;
+    margin-left: 1rem;
+}
+
+.status-display {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.8rem;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #fff;
+    min-width: 100px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 2px solid transparent;
+}
+
+.status-display:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.status-display:active {
+    transform: translateY(0);
+}
+
+.status-display::after {
+    content: '▼';
+    font-size: 0.7rem;
+    margin-left: 0.3rem;
+    transition: transform 0.2s;
+}
+
+.status-display.open::after {
+    transform: rotate(180deg);
+}
+
+.status-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    overflow: hidden;
+    margin-top: 0.25rem;
+}
+
+.status-option {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.status-option:hover {
+    background-color: #f8f9fa;
+}
+
+.status-option.selected {
+    background-color: #e3f2fd;
+    color: #1976d2;
+}
+
+.status-option-icon {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.status-option-icon.ongoing { background: #f59e0b; }
+.status-option-icon.filed-boc { background: #3b82f6; }
+.status-option-icon.completed { background: #10b981; }
+
+/* Standard status color classes */
+.status-ongoing {
+    background-color: #f59e0b;
+    color: white;
+    border: none;
+}
+
+.status-completed {
+    background-color: #10b981;
+    color: white;
+    border: none;
+}
+
+/* Trucking Profile Header Styles */
+.trucking-profile-header-bar {
+    position: sticky;
+    top: var(--header-height);
+    z-index: 10;
+    width: calc(100% + 2rem);
+    background: #fff;
+    min-height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 2rem;
+    box-sizing: border-box;
+    border-bottom: 1px solid #e0e0e0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin: -1rem -1rem 16px -1rem;
+}
+
+.trucking-header-left {
+    flex-shrink: 0;
+}
+
+.trucking-header-title {
+    font-size: 2.1rem;
+    font-weight: 600;
+    color: #222;
+    letter-spacing: -1px;
+}
+
+.trucking-header-prono {
+    color: #888;
+    font-size: 1.4rem;
+    font-weight: 400;
+    margin-left: 0.5rem;
+}
+
+.trucking-header-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-shrink: 0;
+}
+
+.trucking-header-btn {
+    border: none;
+    border-radius: 8px;
+    padding: 0.6em 1.5em;
+    font-size: 1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+    cursor: pointer;
+    transition: all 0.2s;
+    min-width: 200px;
+    justify-content: center;
+}
+
+.trucking-header-btn.disabled {
+    background: #f3e8ff;
+    color: #666;
+    cursor: not-allowed;
+}
+
+.trucking-header-btn.enabled {
+    background: #8b5cf6;
+    color: #fff;
+}
+
+.trucking-header-btn.enabled:hover {
+    background: #7c3aed;
+}
+
+.trucking-header-search {
+    background: #bee4f2;
+    border: none;
+    border-radius: 8px;
+    padding: 0.6em 1.5em;
+    font-size: 1rem;
+    width: 260px;
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+}
+
+.trucking-header-search input {
+    border: none;
+    background: transparent;
+    outline: none;
+    width: 100%;
+    font-size: 1rem;
+    color: #666;
+}
+
+.trucking-header-search input::placeholder {
+    color: #999;
+}
+
+.trucking-header-search i {
+    font-size: 1rem;
+    color: #666;
+}
+
+/* Trucking Status Dropdown Styles - DEPRECATED: Now uses standard status-dropdown classes */
+.trucking-status-dropdown-container {
+    position: relative;
+    display: inline-block;
+    margin-left: 1rem;
+}
+
+.trucking-status-display {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.8rem;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #fff;
+    min-width: 100px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 2px solid transparent;
+}
+
+.trucking-status-display:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.trucking-status-display:active {
+    transform: translateY(0);
+}
+
+.trucking-status-display::after {
+    content: '▼';
+    font-size: 0.7rem;
+    margin-left: 0.3rem;
+    transition: transform 0.2s;
+}
+
+.trucking-status-display.open::after {
+    transform: rotate(180deg);
+}
+
+.trucking-status-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    overflow: hidden;
+    margin-top: 0.25rem;
+}
+
+.trucking-status-option {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.trucking-status-option:hover {
+    background-color: #f8f9fa;
+}
+
+.trucking-status-option.selected {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+.trucking-status-option-icon {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.trucking-status-option-icon.ongoing { background: #f59e0b; }
+.trucking-status-option-icon.completed { background: #10b981; }
+
+/* Status color classes for trucking */
+.trucking-status-ongoing {
+    background-color: #fef3c7;
+    color: #92400e;
+    border-color: #f59e0b;
+}
+
+.trucking-status-completed {
+    background-color: #d1fae5;
+    color: #065f46;
+    border-color: #10b981;
+}
+
+/* Finance Status Styles */
+.status-unpaid {
+    background-color: #dc2626;
+    color: white;
+    border: none;
+}
+
+.status-paid {
+    background-color: #16a34a;
+    color: white;
+    border: none;
+}
+
+.status-option-icon.unpaid { background: #dc2626; }
+.status-option-icon.paid { background: #16a34a; }
+
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
+    /* General Profile Header Bar */
+    .profile-header-bar {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 1rem;
+        gap: 1rem;
+        min-height: auto;
+    }
+
+    .profile-header-title {
+        font-size: 1.5rem;
+        margin-right: 0;
+        text-align: center;
+    }
+
+    .profile-header-prono {
+        font-size: 1.1rem;
+        margin-left: 0.3rem;
+    }
+
+    .profile-header-actions {
+        flex-direction: column;
+        gap: 0.75rem;
+        width: 100%;
+    }
+
+    .profile-header-add-btn {
+        width: 100%;
+        justify-content: center;
+        padding: 0.75em 1em;
+    }
+
+    .profile-header-search {
+        width: 100%;
+        padding: 0.75em 1em;
+    }
+
+    /* Shipment Profile Header */
+    .shipment-profile-header-bar {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 1rem;
+        gap: 1rem;
+        min-height: auto;
+        margin: -1rem -1rem 16px -1rem;
+    }
+
+    .shipment-header-left {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start; /* Stick to left */
+        gap: 0.75rem;
+    }
+
+    .shipment-header-title {
+        font-size: 2.1rem; /* Keep original desktop sizing */
+        text-align: left; /* Stick to left */
+    }
+
+    .shipment-header-prono {
+        font-size: 1.4rem; /* Keep original desktop sizing */
+        margin-left: 0.5rem;
+    }
+
+    .shipment-header-right {
+        flex-direction: column;
+        gap: 0.75rem;
+        width: 100%;
+    }
+
+    /* Buttons container - two buttons on same line (inherits from main CSS) */
+
+    .shipment-header-btn {
+        flex: 1; /* Equal width sharing */
+        min-width: auto;
+        padding: 0.75em 1em;
+        font-size: 0.9rem;
+    }
+
+    .shipment-header-search {
+        width: 100%;
+        padding: 0.75em 1em;
+    }
+
+    /* Status Dropdown Mobile Styles */
+    .status-dropdown-container {
+        margin-left: 0;
+        width: 100%; /* Take full width of parent */
+    }
+
+    .status-display {
+        width: 100%; /* Take full width of parent */
+        justify-content: center;
+        min-width: auto;
+        font-size: 0.85rem;
+        padding: 0.5rem 1rem;
+    }
+
+    .status-dropdown {
+        left: 0;
+        right: 0;
+        width: 100%; /* Match container width */
+        transform: none;
+    }
+
+    /* Trucking Profile Header */
+    .trucking-profile-header-bar {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 1rem;
+        gap: 1rem;
+        min-height: auto;
+        margin: -1rem -1rem 16px -1rem;
+    }
+
+    .trucking-header-left {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start; /* Stick to left like shipment/finance */
+        gap: 0.75rem;
+    }
+
+    .trucking-header-title {
+        font-size: 2.1rem; /* Keep original desktop sizing like shipment/finance */
+        text-align: left; /* Stick to left like shipment/finance */
+    }
+
+    .trucking-header-prono {
+        font-size: 1.4rem; /* Keep original desktop sizing like shipment/finance */
+        margin-left: 0.5rem;
+    }
+
+    .trucking-header-right {
+        flex-direction: column;
+        gap: 0.75rem;
+        width: 100%;
+    }
+
+    .trucking-header-search {
+        width: 100%;
+        padding: 0.75em 1em;
+    }
+
+    /* Status Dropdown Mobile Styles - Full Width (applies to all status dropdowns) */
+    .status-dropdown-container {
+        margin-left: 0;
+        width: 100%; /* Take full width of parent */
+    }
+
+    .status-display {
+        width: 100%;
+        justify-content: center;
+        min-width: auto;
+        font-size: 0.85rem;
+        padding: 0.5rem 1rem;
+    }
+
+    .status-dropdown {
+        left: 50%;
+        transform: translateX(-50%);
+        width: 200px;
+        right: auto;
+    }
+}
+
+/* Extra Small Mobile Devices */
+@media (max-width: 480px) {
+    .profile-header-bar,
+    .shipment-profile-header-bar,
+    .trucking-profile-header-bar {
+        padding: 0.75rem;
+        margin: -0.75rem -0.75rem 12px -0.75rem;
+    }
+
+    .profile-header-title,
+    .shipment-header-title,
+    .trucking-header-title {
+        font-size: 1.3rem;
+    }
+
+    .profile-header-prono,
+    .shipment-header-prono,
+    .trucking-header-prono {
+        font-size: 1rem;
+    }
+
+    .profile-header-add-btn,
+    .shipment-header-btn {
+        font-size: 0.85rem;
+        padding: 0.7em 0.9em;
+    }
+
+    .profile-header-search,
+    .shipment-header-search,
+    .trucking-header-search {
+        font-size: 0.9rem;
+        padding: 0.7em 0.9em;
+    }
+
+    .status-display {
+        font-size: 0.8rem;
+        padding: 0.45rem 0.9rem;
+    }
+
+    .status-dropdown {
+        width: 180px;
+    }
 } 

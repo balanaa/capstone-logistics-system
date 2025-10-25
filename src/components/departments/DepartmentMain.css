@@ -10,6 +10,23 @@
 	grid-template-columns: 1fr 1fr;
 	gap: 12px;
 	align-items: stretch;
+	min-height: 400px; /* Set minimum height for proper stretching */
+}
+
+/* Special case for trucking with 3 charts */
+.dept-top.trucking-three-charts {
+	display: flex;
+	gap: 1rem;
+	width: 100%;
+	align-items: stretch;
+	min-height: 400px; /* Set minimum height for proper stretching */
+}
+
+/* All 3 siblings share width equally */
+.dept-top.trucking-three-charts > * {
+	flex: 1;
+	height: 100%;
+	min-height: 400px; /* Ensure minimum height for charts */
 }
 
 /* Cards */
@@ -78,6 +95,21 @@
 /* Responsive */
 @media (max-width: 700px) {
 	.dept-top { grid-template-columns: 1fr; }
+	.dept-top.trucking-three-charts { 
+		flex-direction: column;
+	}
 }
+
+@media (max-width: 1000px) and (min-width: 701px) {
+	.dept-top.trucking-three-charts { 
+		flex-wrap: wrap;
+	}
+	
+	.dept-top.trucking-three-charts > * {
+		flex: 1 1 calc(50% - 0.5rem);
+		min-width: 0;
+	}
+}
+
 
 

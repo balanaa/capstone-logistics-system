@@ -5,7 +5,22 @@ function formatDue(deadlineIso) {
   const now = new Date()
   const end = new Date(deadlineIso)
   const diffMs = end - now
-  if (diffMs <= 0) return 'Due now'
+  
+  // If deadline is in the past, show "ago"
+  if (diffMs < 0) {
+    const absDiffMs = Math.abs(diffMs)
+    const mins = Math.floor(absDiffMs / 60000)
+    if (mins < 60) return `${mins} min${mins === 1 ? '' : 's'} ago`
+    const hours = Math.floor(mins / 60)
+    if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`
+    const days = Math.floor(hours / 24)
+    return `${days} day${days === 1 ? '' : 's'} ago`
+  }
+  
+  // If deadline is now
+  if (diffMs === 0) return 'Due now'
+  
+  // If deadline is in the future, show "Due in"
   const mins = Math.floor(diffMs / 60000)
   if (mins < 60) return `Due in ${mins} min${mins === 1 ? '' : 's'}`
   const hours = Math.floor(mins / 60)

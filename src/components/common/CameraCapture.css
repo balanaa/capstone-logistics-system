@@ -1,0 +1,191 @@
+/* Camera Capture Component Styles */
+.camera-capture-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.8);
+  z-index: 2000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.camera-capture-modal {
+  background: white;
+  width: 90vw;
+  max-width: 600px;
+  height: 80vh;
+  max-height: 600px;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.camera-capture-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 2px solid #005CAB;
+  background: #f9fafb;
+}
+
+.camera-capture-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.camera-close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #9ca3af;
+  cursor: pointer;
+  padding: 4px 8px;
+  line-height: 1;
+  transition: color 0.2s;
+}
+
+.camera-close-btn:hover {
+  color: #374151;
+}
+
+.camera-capture-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+}
+
+.camera-video-container {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #000;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.camera-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.camera-controls {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.camera-capture-btn {
+  background: #005CAB;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.camera-capture-btn:hover:not(:disabled) {
+  background: #004a8f;
+}
+
+.camera-capture-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.camera-cancel-btn {
+  background: transparent;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  padding: 12px 24px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: background-color 0.2s;
+}
+
+.camera-cancel-btn:hover:not(:disabled) {
+  background: #f9fafb;
+}
+
+.camera-cancel-btn:disabled {
+  color: #ccc;
+  cursor: not-allowed;
+}
+
+.camera-error {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.camera-error-icon {
+  font-size: 3rem;
+  margin-bottom: 16px;
+}
+
+.camera-error-message {
+  font-size: 1.1rem;
+  color: #374151;
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.camera-retry-btn {
+  background: #005CAB;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: background-color 0.2s;
+}
+
+.camera-retry-btn:hover {
+  background: #004a8f;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .camera-capture-modal {
+    width: 95vw;
+    height: 85vh;
+  }
+  
+  .camera-capture-header h3 {
+    font-size: 1.1rem;
+  }
+  
+  .camera-controls {
+    flex-direction: column;
+  }
+  
+  .camera-capture-btn,
+  .camera-cancel-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

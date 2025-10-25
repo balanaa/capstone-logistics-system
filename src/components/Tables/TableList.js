@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import TruckingStatusDropdown from '../TruckingStatusDropdown'
+import { updateTruckingContainerStatus } from '../../services/supabase/truckingStatus'
 import './TableList.css'
 
 /**
@@ -31,17 +33,43 @@ export default function TableList({
   columns = [],
   data = [],
   onAdd = () => {},
+  showAddButton = true,
   routePrefix = '',
   proKey = 'proNo',
-  dateField = 'filedOn',
+  dateField = 'createdOn',
   searchKeys = null,
   rowsPerPage = 10,
   onOpenProfile = null,
   loading = false,
+  showTypeDropdown = false,
+  customTypeOptions = null,
 }) {
   const navigate = useNavigate();
   const [toastMessage, setToastMessage] = useState('');
   const [showToast, setShowToast] = useState(false);
+
+  // Handle trucking status changes
+  const handleTruckingStatusChange = async (newStatus, containerId) => {
+    try {
+      // Get current user ID (you might need to adjust this based on your auth context)
+      const userId = 'current-user-id'; // Replace with actual user ID from context
+      
+      await updateTruckingContainerStatus(containerId, newStatus, userId);
+      
+      // Show success message
+      setToastMessage(`Status updated to ${newStatus}`);
+      setShowToast(true);
+      
+      // Refresh the data by triggering a re-render
+      // You might want to add a callback prop to refresh data from parent
+      window.location.reload(); // Simple refresh for now
+      
+    } catch (error) {
+      console.error('Error updating trucking status:', error);
+      setToastMessage('Failed to update status');
+      setShowToast(true);
+    }
+  };
 
   // Internal state
   const [searchTerm, setSearchTerm] = useState('');
@@ -156,6 +184,29 @@ export default function TableList({
     return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' });
   };
 
+  // consignee formatter - normalize consignee names
+  const formatConsignee = (raw) => {
+    if (!raw) return '-';
+    const text = String(raw).toUpperCase();
+    if (text.includes('PUREGOLD')) return 'PUREGOLD';
+    if (text.includes('ROBINSON')) return 'ROBINSONS';
+    if (text.includes('MOTOSCO') || text.includes('MONTOSCO')) return 'MONTOSCO';
+    return raw; // Return original if no match
+  };
+
+  // container formatter - handle multiple containers with line breaks
+  const formatContainers = (raw) => {
+    if (!raw) return '-';
+    
+    // If it's already formatted with commas (from service), split and join with line breaks
+    if (String(raw).includes(',')) {
+      return String(raw).split(',').map(item => item.trim()).join('\n');
+    }
+    
+    // If it's a single container, return as is
+    return String(raw);
+  };
+
   // Clear filters handler
   const clearFilters = () => {
     setStartDate('');
@@ -177,14 +228,22 @@ export default function TableList({
   return (
     <div className="table-list-root">
       <div className="table-control-bar" role="toolbar" aria-label={`${title} controls`}>
+        {/* Desktop Layout */}
         <div className="control-left">
           <h2 className="table-list-title-inline">{title} List</h2>
-          <button className="table-list-add-btn-inline" onClick={onAdd}> <i class="fi fi-rs-square-plus"></i>  Create New Shipment</button>
+          {showAddButton && (
+            <button className="table-list-add-btn-inline" onClick={onAdd}>
+              <i className="fi fi-rs-plus"></i>
+              <span className="btn-text-create">Create</span>
+              <span className="btn-text-new">New</span>
+              <span className="btn-text-shipment">Shipment</span>
+            </button>
+          )}
         </div>
 
         <div className="control-center">
-          <label className="control-date">
-            Starting From:
+          <div className="control-date">
+            <label>Starting From:</label>
             <input
               type="date"
               value={startDate}
@@ -192,10 +251,9 @@ export default function TableList({
               className="table-filter-date-inline"
               aria-label="Start date"
             />
-          </label>
-
-          <label className="control-date">
-            Ending To:
+          </div>
+          <div className="control-date">
+            <label>Ending To:</label>
             <input
               type="date"
               value={endDate}
@@ -203,25 +261,148 @@ export default function TableList({
               className="table-filter-date-inline"
               aria-label="End date"
             />
-          </label>
-
-          <input
-            className="table-list-search-inline"
-            placeholder="Search..."
-            value={searchTerm}
-            onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-            aria-label="Search records"
-          />
-          <button className="table-filter-btn-clear" onClick={clearFilters}>Clear Filters</button>
+          </div>
+          {showTypeDropdown && (
+            <select className="type-dropdown" aria-label="Type filter">
+              {customTypeOptions ? (
+                customTypeOptions.map(type => (
+                  <option key={type} value={type}>
+                    {type === 'all' ? 'All Types' : type}
+                  </option>
+                ))
+              ) : (
+                <>
+                  <option value="all">All Types</option>
+                  <option value="shipment">Shipment</option>
+                  <option value="finance">Finance</option>
+                  <option value="trucking">Trucking</option>
+                </>
+              )}
+            </select>
+          )}
+          <div className="search-wrapper">
+            <i className="fi fi-rs-search search-icon"></i>
+            <input
+              className="search-input"
+              placeholder="Search"
+              value={searchTerm}
+              onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+              aria-label="Search records"
+            />
+          </div>
         </div>
 
         <div className="control-right">
+          <button className="table-filter-btn-clear" onClick={clearFilters}>
+            <i className="fi fi-rs-clear-alt"></i>
+            Clear Filters
+          </button>
           <div className="page-indicator" aria-live="polite">
             {currentPage}/{totalPages}
           </div>
           <div className="page-arrows">
             <button className="arrow-btn" onClick={handlePrev} disabled={currentPage === 1}>&lt;</button>
             <button className="arrow-btn" onClick={handleNext} disabled={currentPage === totalPages}>&gt;</button>
+          </div>
+        </div>
+
+        {/* Mobile Layout */}
+        <div className="mobile-controls">
+          <div className="control-row control-row-title">
+            <h2 className="table-list-title-inline">{title} List</h2>
+            {showAddButton && (
+              <button className="table-list-add-btn-inline" onClick={onAdd}>
+                <i className="fi fi-rs-plus"></i>
+                <span className="btn-text-create">Create</span>
+                <span className="btn-text-new">New</span>
+                <span className="btn-text-shipment">Shipment</span>
+              </button>
+            )}
+          </div>
+
+          <div className="control-row control-row-label">
+            <label className="control-label">Starting From:</label>
+          </div>
+
+          <div className="control-row control-row-input">
+            <input
+              type="date"
+              value={startDate}
+              onChange={e => { setStartDate(e.target.value); setCurrentPage(1); }}
+              className="table-filter-date-inline"
+              aria-label="Start date"
+            />
+          </div>
+
+          <div className="control-row control-row-label">
+            <label className="control-label">Ending To:</label>
+          </div>
+
+          <div className="control-row control-row-input">
+            <input
+              type="date"
+              value={endDate}
+              onChange={e => { setEndDate(e.target.value); setCurrentPage(1); }}
+              className="table-filter-date-inline"
+              aria-label="End date"
+            />
+          </div>
+
+          {showTypeDropdown && (
+            <>
+              <div className="control-row control-row-label">
+                <label className="control-label">Type:</label>
+              </div>
+              <div className="control-row control-row-input">
+                <select className="type-dropdown" aria-label="Type filter">
+                  {customTypeOptions ? (
+                    customTypeOptions.map(type => (
+                      <option key={type} value={type}>
+                        {type === 'all' ? 'All Types' : type}
+                      </option>
+                    ))
+                  ) : (
+                    <>
+                      <option value="all">All Types</option>
+                      <option value="shipment">Shipment</option>
+                      <option value="finance">Finance</option>
+                      <option value="trucking">Trucking</option>
+                    </>
+                  )}
+                </select>
+              </div>
+            </>
+          )}
+
+          <div className="control-row control-row-label">
+            <label className="control-label">Search:</label>
+          </div>
+
+          <div className="control-row control-row-input">
+            <div className="search-wrapper">
+              <i className="fi fi-rs-search search-icon"></i>
+              <input
+                className="search-input"
+                placeholder="Search"
+                value={searchTerm}
+                onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                aria-label="Search records"
+              />
+            </div>
+          </div>
+
+          <div className="control-row control-row-actions">
+            <button className="table-filter-btn-clear" onClick={clearFilters}>
+              <i className="fi fi-rs-clear-alt"></i>
+              Clear Filters
+            </button>
+            <div className="page-indicator" aria-live="polite">
+              {currentPage}/{totalPages}
+            </div>
+            <div className="page-arrows">
+              <button className="arrow-btn" onClick={handlePrev} disabled={currentPage === 1}>&lt;</button>
+              <button className="arrow-btn" onClick={handleNext} disabled={currentPage === totalPages}>&gt;</button>
+            </div>
           </div>
         </div>
       </div>
@@ -242,10 +423,21 @@ export default function TableList({
             ) : currentRows.length > 0 ? (
               currentRows.map((row, idx) => {
                 const status = (row.status || '').toString().toLowerCase();
-                const statusClass = `status-chip status-${status.replace(/\s+/g, '-')}`;
+                // Map display status to CSS class
+                const getStatusClass = (statusText) => {
+                  const statusMap = {
+                    'ongoing': 'status-ongoing',
+                    'filed boc': 'status-filed-boc',
+                    'completed': 'status-complete',
+                    'unpaid': 'status-unpaid',
+                    'paid': 'status-paid'
+                  }
+                  return statusMap[statusText] || 'status-pending'
+                }
+                const statusClass = `status-chip ${getStatusClass(status)}`;
                 return (
                   <tr key={row.id || idx}>
-                    <td>
+                    <td data-label="Actions">
                       <button
                         className="table-row-arrow"
                         onClick={() => handleOpen(row)}
@@ -257,14 +449,41 @@ export default function TableList({
 
                     {columns.map(col => {
                       const value = row[col.key] ?? '-';
-                      if (col.key === dateField || col.key === 'created_at' || col.key === 'filedOn') {
-                        return <td key={col.key}>{formatDate(row[col.key] || row[dateField] || row.created_at)}</td>;
+                      if (col.key === dateField || col.key === 'created_at' || col.key === 'filedOn' || col.key === 'createdOn') {
+                        return <td key={col.key} data-label={col.label}>{formatDate(row[col.key] || row[dateField] || row.created_at || row.createdOn)}</td>;
+                      }
+                      if (col.key === 'consignee' || col.key === 'consigneeName') {
+                        console.log(`[TableList] Processing ${col.key} for row ${row.id}:`, { value, formatted: formatConsignee(value) });
+                        return <td key={col.key} data-label={col.label} onDoubleClick={() => handleCellDoubleClick(value)}>{formatConsignee(value)}</td>;
+                      }
+                      if (col.key === 'containerNoSealNo' || col.key === 'containerNo' || col.key === 'containerNumber') {
+                        const formattedContainers = formatContainers(value);
+                        return (
+                          <td key={col.key} data-label={col.label} className="container-cell" onDoubleClick={() => handleCellDoubleClick(value)}>
+                            {formattedContainers.split('\n').map((line, index) => (
+                              <div key={index} className="container-line">{line}</div>
+                            ))}
+                          </td>
+                        );
                       }
                       if (col.key === 'status') {
-                        return <td key={col.key}><span className={statusClass}>{value}</span></td>;
+                        // Check if this is a trucking status (has containerId)
+                        if (row.containerId && row.rawStatus) {
+                          return (
+                            <td key={col.key} data-label={col.label}>
+                              <TruckingStatusDropdown
+                                currentStatus={row.rawStatus}
+                                onStatusChange={handleTruckingStatusChange}
+                                containerId={row.containerId}
+                              />
+                            </td>
+                          );
+                        }
+                        // Regular status chip for other departments
+                        return <td key={col.key} data-label={col.label}><span className={statusClass}>{value}</span></td>;
                       }
                       return (
-                        <td key={col.key} onDoubleClick={() => handleCellDoubleClick(value)}>
+                        <td key={col.key} data-label={col.label} onDoubleClick={() => handleCellDoubleClick(value)}>
                           {value}
                         </td>
                       );
@@ -277,26 +496,34 @@ export default function TableList({
             )}
           </tbody>
         </table>
+      </div>
 
-        {/* Pagination */}
-        <div className="table-list-pagination">
-          <button className="pagination-btn" onClick={() => handleGoto(1)} disabled={currentPage === 1}>⟵ First</button>
-          <button className="pagination-btn" onClick={handlePrev} disabled={currentPage === 1}>← Prev</button>
-          {paginationWindow[0] > 1 && <span className="dots">…</span>}
-          {paginationWindow.map(p => (
-            <button
-              key={p}
-              className={`pagination-btn ${p === currentPage ? 'active' : ''}`}
-              onClick={() => handleGoto(p)}
-              aria-current={p === currentPage ? 'page' : undefined}
-            >
-              {p}
-            </button>
-          ))}
-          {paginationWindow[paginationWindow.length - 1] < totalPages && <span className="dots">…</span>}
-          <button className="pagination-btn" onClick={handleNext} disabled={currentPage === totalPages}>Next →</button>
-          <button className="pagination-btn" onClick={() => handleGoto(totalPages)} disabled={currentPage === totalPages}>Last ⟶</button>
-        </div>
+      {/* Pagination - moved outside table wrapper */}
+      <div className="table-list-pagination">
+        <button className="pagination-btn" onClick={() => handleGoto(1)} disabled={currentPage === 1}>
+          <i className="fi fi-rs-angle-double-left"></i>
+        </button>
+        <button className="pagination-btn" onClick={handlePrev} disabled={currentPage === 1}>
+          <i className="fi fi-rs-angle-left"></i>
+        </button>
+        {paginationWindow[0] > 1 && <span className="dots">…</span>}
+        {paginationWindow.map(p => (
+          <button
+            key={p}
+            className={`pagination-btn ${p === currentPage ? 'active' : ''}`}
+            onClick={() => handleGoto(p)}
+            aria-current={p === currentPage ? 'page' : undefined}
+          >
+            {p}
+          </button>
+        ))}
+        {paginationWindow[paginationWindow.length - 1] < totalPages && <span className="dots">…</span>}
+        <button className="pagination-btn" onClick={handleNext} disabled={currentPage === totalPages}>
+          <i className="fi fi-rs-angle-right"></i>
+        </button>
+        <button className="pagination-btn" onClick={() => handleGoto(totalPages)} disabled={currentPage === totalPages}>
+          <i className="fi fi-rs-angle-double-right"></i>
+        </button>
       </div>
 
       {showToast && (

@@ -1,0 +1,30 @@
+/* Verifier Page Styles */
+
+.verifier-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 0;
+}
+
+/* Top section: Pie Chart + Reminders (matching DepartmentMain layout) */
+.verifier-page .dept-top {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-items: stretch;
+  min-height: 400px;
+}
+
+/* Queue section */
+.verifier-queue-section {
+  width: 100%;
+}
+
+/* Responsive */
+@media (max-width: 700px) {
+  .verifier-page .dept-top {
+    grid-template-columns: 1fr;
+  }
+}
+

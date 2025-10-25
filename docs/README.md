@@ -59,6 +59,7 @@ This index organizes the docs by aspect and links related files. Use it as the s
 
 ### Changelogs
 
+- [CHANGELOG-table-improvements-eta-functionality.md](04-ops/changelogs/CHANGELOG-table-improvements-eta-functionality.md) — **Latest**
 - [CHANGELOG-roles-access-update.md](04-ops/changelogs/CHANGELOG-roles-access-update.md)
 - [CHANGELOG-shipment-db-checkpoint.md](04-ops/changelogs/CHANGELOG-shipment-db-checkpoint.md)
 

@@ -1,32 +1,64 @@
 import React from 'react'
-import './CreateShipmentOverlay.css'
+import DocumentUploadOverlay from './DocumentUploadOverlay'
 import { supabase } from '../../services/supabase/client'
-
-const ACCEPTED_TYPES = [
-  'image/jpeg',
-  'image/png',
-  'application/pdf',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-]
 
 export default function CreateShipmentOverlay({ open, onClose, onConfirm, existingProNos = [] }) {
   const [proNumber, setProNumber] = React.useState('')
-  const [file, setFile] = React.useState(null)
-  const [previewUrl, setPreviewUrl] = React.useState('')
   const [error, setError] = React.useState('')
   const [checkingDb, setCheckingDb] = React.useState(false)
   const [existsInDb, setExistsInDb] = React.useState(false)
-  const inputRef = React.useRef(null)
+  const [showConfirm, setShowConfirm] = React.useState(false)
+  const [generatedProNumber, setGeneratedProNumber] = React.useState('')
+  const [file, setFile] = React.useState(null)
+  const confirmButtonRef = React.useRef(null)
 
+  // Get current year
+  const currentYear = new Date().getFullYear()
+  
+  // Generate next PRO number based on highest existing + 1
   React.useEffect(() => {
-    return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl)
+    const generateNextProNumber = async () => {
+      try {
+        // Get highest PRO number from database
+        const { data, error } = await supabase
+          .from('pro')
+          .select('pro_number')
+          .order('pro_number', { ascending: false })
+          .limit(1)
+        
+        if (error) throw error
+        
+        let nextNumber = 1
+        if (data && data.length > 0) {
+          const highestPro = data[0].pro_number
+          const year = parseInt(highestPro.toString().substring(0, 4))
+          const number = parseInt(highestPro.toString().substring(4))
+          
+          if (year === currentYear) {
+            nextNumber = number + 1
+          }
+        }
+        
+        const paddedNumber = nextNumber.toString().padStart(3, '0')
+        const fullProNumber = `${currentYear}${paddedNumber}`
+        setGeneratedProNumber(fullProNumber)
+        setProNumber(paddedNumber)
+      } catch (err) {
+        console.error('Error generating PRO number:', err)
+        // Fallback to 001
+        setGeneratedProNumber(`${currentYear}001`)
+        setProNumber('001')
+      }
     }
-  }, [previewUrl])
+    
+    if (open) {
+      generateNextProNumber()
+    }
+  }, [open, currentYear])
 
-  const validatePro = (val) => /^\d{7}$/.test(val)
+  const validatePro = (val) => /^\d{3}$/.test(val)
   const proExists = (val) => Array.isArray(existingProNos) && existingProNos.includes(val)
+  
   // DB uniqueness check
   React.useEffect(() => {
     let active = true
@@ -35,10 +67,11 @@ export default function CreateShipmentOverlay({ open, onClose, onConfirm, existi
       if (!validatePro(val)) { setExistsInDb(false); return }
       setCheckingDb(true)
       try {
+        const fullPro = `${currentYear}${val}`
         const { data, error } = await supabase
           .from('pro')
           .select('pro_number')
-          .eq('pro_number', val)
+          .eq('pro_number', fullPro)
           .limit(1)
         if (!active) return
         if (error) { setExistsInDb(false) }
@@ -49,96 +82,213 @@ export default function CreateShipmentOverlay({ open, onClose, onConfirm, existi
     }
     run()
     return () => { active = false }
-  }, [proNumber])
+  }, [proNumber, currentYear])
 
+  // Debug button state after render - must be before conditional return
+  React.useEffect(() => {
+    if (open && confirmButtonRef.current) {
+      // Button state debugging removed
+    }
+  })
 
   if (!open) return null
 
+  const disabled = !validatePro(proNumber) || proExists(proNumber) || existsInDb || checkingDb
 
-  const handlePick = () => inputRef.current?.click()
-
-  const onFiles = (files) => {
-    const list = Array.from(files || [])
-    if (!list.length) return
-    const f = list[0]
-    if (!ACCEPTED_TYPES.includes(f.type)) {
-      setError(`Unsupported type: ${f.type}`)
+  const handleSubmit = (selectedFile, formData) => {
+    
+    if (!validatePro(proNumber) || proExists(proNumber) || existsInDb) {
+      setError('Invalid or existing PRO number')
       return
     }
-    setError('')
-    setFile(f)
-    const url = URL.createObjectURL(f)
-    setPreviewUrl(url)
+    
+    if (!selectedFile) {
+      setError('Please select a file first')
+      return
+    }
+    
+    const fullProNumber = `${currentYear}${proNumber}`
+    setGeneratedProNumber(fullProNumber)
+    setFile(selectedFile)
+    setShowConfirm(true)
   }
 
-  const onDrop = (e) => {
-    e.preventDefault(); e.stopPropagation()
-    if (e.dataTransfer?.files?.length) onFiles(e.dataTransfer.files)
+  // Fallback: Direct confirm button handler
+  const handleDirectConfirm = () => {
+    
+    if (!validatePro(proNumber) || proExists(proNumber) || existsInDb) {
+      setError('Invalid or existing PRO number')
+      return
+    }
+    
+    // Get file from DocumentUploadOverlay - try multiple selectors
+    let fileInput = document.querySelector('.duo-modal input[type="file"]')
+    if (!fileInput) {
+      fileInput = document.querySelector('input[type="file"]')
+    }
+    
+    const file = fileInput?.files?.[0]
+    
+    if (!file) {
+      setError('Please select a file first')
+      return
+    }
+    
+    const fullProNumber = `${currentYear}${proNumber}`
+    setGeneratedProNumber(fullProNumber)
+    setFile(file)
+    setShowConfirm(true)
   }
-
-  const ext = (file?.name || '').split('.').pop()?.toLowerCase() || ''
-  const canEmbed = ext === 'pdf' || ext === 'png' || ext === 'jpg' || ext === 'jpeg'
-
-  const disabled = !file || !validatePro(proNumber) || proExists(proNumber) || existsInDb || checkingDb
 
   const handleConfirm = () => {
-    if (disabled) return
-    onConfirm({ proNumber, file, previewUrl, originalFileName: file.name })
+    const previewUrl = URL.createObjectURL(file)
+    onConfirm({ proNumber: generatedProNumber, file, previewUrl, originalFileName: file.name })
+    setShowConfirm(false)
+  }
+
+  const handleCancelConfirm = () => {
+    setShowConfirm(false)
+    setFile(null)
   }
 
   return (
-    <div className="cso-backdrop" onClick={onClose}>
-      <div className="cso-modal" onClick={(e) => e.stopPropagation()}>
-        <h2>Create New Shipment</h2>
-        <div className="cso-body">
-          <div className="cso-left" onDragOver={(e) => { e.preventDefault(); e.stopPropagation() }} onDrop={onDrop}>
-            {!previewUrl ? (
-              <div className="cso-drop" role="button" tabIndex={0} onClick={handlePick} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handlePick() }}>
-                <strong>Upload Bill of Lading (BOL)</strong>
-                <div>Drag & drop or click to choose</div>
-                <div className="cso-accept">Accepted: jpg, png, pdf, docx, xlsx</div>
-                <input ref={inputRef} type="file" accept={ACCEPTED_TYPES.join(',')} onChange={(e) => onFiles(e.target.files)} style={{ display: 'none' }} />
-              </div>
-            ) : (
-              <div className="cso-preview">
-                <div className="cso-filename">{file?.name}</div>
-                {canEmbed ? (
-                  ext === 'pdf' ? (
-                    <iframe title={file?.name} src={previewUrl} className="cso-frame" />
-                  ) : (
-                    <img alt={file?.name} src={previewUrl} className="cso-image" />
-                  )
-                ) : (
-                  <div className="cso-fallback">Preview unavailable. Selected: {file?.name}</div>
-                )}
-              </div>
-            )}
-          </div>
-          <div className="cso-right">
+    <>
+      <DocumentUploadOverlay
+        title="Create New Shipment"
+        proNumber={generatedProNumber}
+        onClose={onClose}
+        onSubmit={handleSubmit}
+        error={error}
+        className="create-shipment-no-scroll"
+        footerButtons={
+          <>
+            <button className="duo-btn" type="button" onClick={onClose}>
+              Cancel
+            </button>
+            <button 
+              ref={confirmButtonRef}
+              className="duo-btn duo-primary" 
+              type="submit" 
+              disabled={disabled}
+            >
+              Confirm
+            </button>
+          </>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <div className="form-group">
             <label htmlFor="pro">PRO Number</label>
-            <input id="pro" type="text" value={proNumber} onChange={(e) => setProNumber(e.target.value)} placeholder="e.g., 2025001" />
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center',
+              border: '1px solid #d1d5db',
+              borderRadius: '8px',
+              backgroundColor: '#fff',
+              overflow: 'hidden',
+              width: '200px',
+              margin: '0 auto'
+            }}>
+              <input 
+                type="text" 
+                value={currentYear}
+                readOnly
+                style={{ 
+                  width: '100px', 
+                  textAlign: 'center',
+                  backgroundColor: '#f5f5f5',
+                  color: '#666',
+                  cursor: 'not-allowed',
+                  border: 'none',
+                  outline: 'none',
+                  padding: '12px 8px',
+                  fontSize: '1rem',
+                  fontWeight: '500'
+                }}
+              />
+              <div style={{
+                width: '1px',
+                height: '24px',
+                backgroundColor: '#d1d5db',
+                margin: '0 8px'
+              }}></div>
+              <input 
+                id="pro" 
+                name="pro"
+                type="text" 
+                value={proNumber} 
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, '').slice(0, 3)
+                  setProNumber(val)
+                }}
+                placeholder="001"
+                style={{ 
+                  width: '80px', 
+                  textAlign: 'center',
+                  border: 'none',
+                  outline: 'none',
+                  padding: '12px 8px',
+                  fontSize: '1rem',
+                  fontWeight: '500'
+                }}
+                maxLength={3}
+              />
+            </div>
             {!validatePro(proNumber) && proNumber && (
-              <div className="cso-hint">Format: 7 digits (YYYYNNN), e.g., 2025001</div>
+              <div className="duo-hint">Enter 3 digits (001-999)</div>
             )}
             {validatePro(proNumber) && proExists(proNumber) && (
-              <div className="cso-error">This PRO Number already exists.</div>
+              <div className="duo-error">This PRO Number already exists.</div>
             )}
             {validatePro(proNumber) && !proExists(proNumber) && existsInDb && (
-              <div className="cso-error">This PRO Number already exists in database.</div>
+              <div className="duo-error">This PRO Number already exists in database.</div>
             )}
             {checkingDb && (
-              <div className="cso-hint">Checking availability…</div>
+              <div className="duo-hint">Checking availability…</div>
             )}
-            {error && <div className="cso-error">{error}</div>}
-            <div className="cso-actions">
-              <button className="cso-btn" onClick={onClose}>Cancel</button>
-              <button className="cso-btn cso-primary" onClick={handleConfirm} disabled={disabled}>Confirm</button>
+            {validatePro(proNumber) && !proExists(proNumber) && !existsInDb && !checkingDb && (
+              <div className="duo-hint" style={{ color: '#059669' }}>✓ PRO Number {currentYear}{proNumber} is available</div>
+            )}
+          </div>
+        </div>
+      </DocumentUploadOverlay>
+
+      {/* Confirmation Mini Overlay */}
+      {showConfirm && (
+        <div className="duo-backdrop" onClick={handleCancelConfirm}>
+          <div className="duo-modal" style={{ width: '400px', height: 'auto' }} onClick={(e) => e.stopPropagation()}>
+            <div className="duo-header">
+              <h2 className="duo-header-title">Confirm PRO Creation</h2>
+              <button className="duo-close-btn" onClick={handleCancelConfirm} type="button">✕</button>
+            </div>
+            
+            <div style={{ padding: '20px' }}>
+              <p style={{ margin: '0 0 20px 0', fontSize: '1rem' }}>
+                Create PRO number <strong>{generatedProNumber}</strong>?
+              </p>
+              <p style={{ margin: '0 0 20px 0', fontSize: '0.9rem', color: '#666' }}>
+                This will create a new shipment and proceed to Bill of Lading upload.
+              </p>
+            </div>
+            
+            <div className="duo-footer">
+              <div className="duo-footer-left"></div>
+              <div className="duo-footer-right">
+                <button className="duo-btn" type="button" onClick={handleCancelConfirm}>
+                  Cancel
+                </button>
+                <button 
+                  className="duo-btn duo-primary" 
+                  type="button" 
+                  onClick={handleConfirm}
+                >
+                  Confirm
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </div>
+      )}
+    </>
   )
 }
-
-

@@ -1,0 +1,17 @@
+    .remarks-table { display: grid; grid-template-rows: auto 1fr; gap: 8px; --remarks-control-height: 2.5rem; width: min(100%, max(70%, 100vw - 2rem)); margin: 0 auto; }
+.remarks-header { display: grid; grid-template-columns: 140px 1fr var(--remarks-control-height); gap: 8px; font-weight: 600; color: #333; }
+.remarks-col.actions { text-align: right; }
+.remarks-body { display: grid; gap: 8px; }
+.remarks-row { display: grid; grid-template-columns: 140px 1fr var(--remarks-control-height); gap: 8px; align-items: start; background: rgba(255,255,255,0.6); border: 1px solid #cfd8dc; border-radius: 6px; padding: 8px; transition: box-shadow 0.2s, transform 0.05s; }
+.remarks-row:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.remarks-date-input { height: var(--remarks-control-height); padding: 0 10px; font-size: 14px; border: 1px solid #ddd; border-radius: 4px; }
+.remarks-notes-input { height: var(--remarks-control-height); padding: 8px 10px; font-size: 14px; border: 1px solid #ddd; border-radius: 4px; resize: none; }
+.remarks-delete-btn { height: var(--remarks-control-height); width: var(--remarks-control-height); background: #f44336; color: #fff; border: none; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: background 0.2s, transform 0.05s; }
+.remarks-delete-btn:disabled { background: #ccc; cursor: not-allowed; opacity: 0.5; }
+.remarks-delete-btn:not(:disabled):hover { background: #da190b; }
+.remarks-delete-btn:not(:disabled):active { transform: scale(0.98); }
+.remarks-add-btn { padding: .75em 1.2em; background: #0066cc; border: 1px solid #005bb5; color: #fff; border-radius: 8px; cursor: pointer; font-weight: 600; display: block; width: 100%; text-align: center; }
+.remarks-add-btn:hover { background: #005bb5; }
+.remarks-add-container { width: min(100%, max(70%, 100vw - 2rem)); margin: 12px auto 0; }
+
+

@@ -2,6 +2,9 @@
 .rem-panel {
   background: var(--lighter-color);
   border-radius: 14px;
+  height: 100%; /* Take full height of parent */
+  display: flex;
+  flex-direction: column; /* Ensure proper flex layout */
 }
 .rem-header {
   background: var(--secondary-color);
@@ -12,6 +15,10 @@
 }
 .rem-body {
   padding: .8rem 1.2rem 1.2rem;
+  flex: 1; /* Take remaining space in flex container */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
 }
 .rem-row {
   display: flex;

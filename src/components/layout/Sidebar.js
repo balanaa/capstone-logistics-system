@@ -10,9 +10,11 @@ export default function Sidebar() {
   const items = [
     { path: '/dashboard', icon: 'fi fi-rs-house-chimney-blank', label: 'Dashboard', roles: ['admin','viewer'] },
     { path: '/shipment', icon: 'fi fi-rs-ship', label: 'Shipment', roles: ['shipment','admin','viewer'] },
+    { path: '/verifier', icon: 'fi fi-rs-memo-circle-check', label: 'Verify', roles: ['verifier','admin','viewer'] },
     { path: '/trucking', icon: 'fi fi-rs-truck-container', label: 'Trucking', roles: ['trucking','admin','viewer'] },
     { path: '/finance', icon: 'fi fi-rs-calculator-money', label: 'Finance', roles: ['finance','admin','viewer'] },
-    { path: '/analytics', icon: 'fi fi-rs-chart-histogram', label: 'Analytics', roles: ['admin','viewer'] }
+    { path: '/analytics', icon: 'fi fi-rs-chart-histogram', label: 'Analytics', roles: ['admin','viewer'] },
+    { path: '/log', icon: 'fi fi-rs-list-check', label: 'Actions Log', roles: ['admin','viewer'] }
   ]
 
   const canSee = (allowed) => roles.some(r => allowed.includes(r)) || roles.includes('admin') || roles.includes('viewer')

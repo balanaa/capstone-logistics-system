@@ -12,7 +12,6 @@ export default function UserManagement() {
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
-  const [endDate, setEndDate] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
@@ -99,7 +98,7 @@ export default function UserManagement() {
     }
   }
 
-  // Filter users based on search and date
+  // Filter users based on search
   const filteredUsers = useMemo(() => {
     let filtered = [...users]
     
@@ -113,18 +112,8 @@ export default function UserManagement() {
       )
     }
     
-    // Date filter (ending to)
-    if (endDate) {
-      const end = new Date(endDate)
-      end.setHours(23, 59, 59, 999)
-      filtered = filtered.filter(user => {
-        const userDate = new Date(user.created_at)
-        return userDate <= end
-      })
-    }
-    
     return filtered
-  }, [users, searchTerm, endDate])
+  }, [users, searchTerm])
 
   // Pagination
   const totalPages = Math.max(1, Math.ceil(filteredUsers.length / rowsPerPage))
@@ -133,7 +122,7 @@ export default function UserManagement() {
     currentPage * rowsPerPage
   )
 
-  // Update user permission for a department
+  // Update user permission for a department (ENHANCED VERSION)
   const updatePermission = async (userId, department, level) => {
     if (!isAdmin) {
       showToast('Only admins can edit permissions')
@@ -142,8 +131,10 @@ export default function UserManagement() {
     
     try {
       const flags = getPermissionFlags(level)
+      const user = users.find(u => u.id === userId)
+      if (!user) return
       
-      // Prepare the update data (only the columns we're changing)
+      // Step 1: Update permissions table
       const updateData = {
         [`${department}_can_view`]: flags.canView,
         [`${department}_can_write`]: flags.canWrite,
@@ -151,25 +142,47 @@ export default function UserManagement() {
         updated_at: new Date().toISOString()
       }
       
-      // Use UPDATE (permissions row should already exist from migration)
-      const { error } = await supabase
+      const { error: permError } = await supabase
         .from('permissions')
         .update(updateData)
         .eq('user_id', userId)
       
-      if (error) throw error
+      if (permError) throw permError
       
-      // Update local state
+      // Step 2: Update roles array in profiles table
+      let newRoles = [...(user.roles || [])]
+      const departmentRole = department // 'shipment', 'trucking', or 'finance'
+      
+      if (level === 'no_access') {
+        // Remove department role if no access
+        newRoles = newRoles.filter(role => role !== departmentRole)
+      } else {
+        // Add department role if any access (view, edit, or all)
+        if (!newRoles.includes(departmentRole)) {
+          newRoles.push(departmentRole)
+        }
+      }
+      
+      // Update profiles table with new roles
+      const { error: rolesError } = await supabase
+        .from('profiles')
+        .update({ roles: newRoles })
+        .eq('id', userId)
+      
+      if (rolesError) throw rolesError
+      
+      // Step 3: Update local state
       setUsers(prev => prev.map(u => 
         u.id === userId ? { 
           ...u, 
           [`${department}_can_view`]: flags.canView,
           [`${department}_can_write`]: flags.canWrite,
-          [`${department}_can_delete`]: flags.canDelete
+          [`${department}_can_delete`]: flags.canDelete,
+          roles: newRoles
         } : u
       ))
       
-      showToast('Permission updated')
+      showToast('Permission and role updated')
     } catch (err) {
       console.error('Error updating permission:', err)
       showToast('Error updating permission: ' + (err.message || 'Unknown error'))
@@ -306,6 +319,103 @@ export default function UserManagement() {
     return buttons
   }, [currentPage, totalPages])
 
+  // Mobile card component
+  const MobileUserCard = ({ user, index }) => (
+    <div className="mobile-user-card">
+      <div className="mobile-user-header">
+        <div className="mobile-user-info">
+          <div className="mobile-user-id">ID: {(currentPage - 1) * rowsPerPage + index + 1}</div>
+          <div className="mobile-user-name">{user.full_name || 'N/A'}</div>
+          <div className="mobile-user-email">{user.email}</div>
+        </div>
+        {isAdmin && (
+          <div className="mobile-user-actions">
+            <button
+              className="btn-action btn-reset"
+              onClick={() => handlePasswordReset(user.email)}
+              title="Send password reset email"
+            >
+              <i className="fi fi-rs-key"></i>
+            </button>
+            <button
+              className="btn-action btn-delete"
+              onClick={() => handleDeleteUser(user.id, user.email)}
+              title="Delete user"
+            >
+              <i className="fi fi-rs-trash"></i>
+            </button>
+          </div>
+        )}
+      </div>
+      
+      <div className="mobile-permissions">
+        <div className="mobile-permission-group">
+          <label className="mobile-permission-label">Shipment Access</label>
+          <select
+            className="mobile-permission-select"
+            value={getPermissionLevel(user.shipment_can_view, user.shipment_can_write, user.shipment_can_delete)}
+            onChange={(e) => updatePermission(user.id, 'shipment', e.target.value)}
+            disabled={!isAdmin}
+          >
+            {permissionOptions.map(opt => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        
+        <div className="mobile-permission-group">
+          <label className="mobile-permission-label">Shipment Approval</label>
+          <select
+            className="mobile-permission-select"
+            value={user.roles?.includes('verifier') ? 'can_edit' : 'no_access'}
+            onChange={(e) => updateShipmentApproval(user.id, e.target.value)}
+            disabled={!isAdmin}
+          >
+            {approvalOptions.map(opt => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        
+        <div className="mobile-permission-group">
+          <label className="mobile-permission-label">Trucking Access</label>
+          <select
+            className="mobile-permission-select"
+            value={getPermissionLevel(user.trucking_can_view, user.trucking_can_write, user.trucking_can_delete)}
+            onChange={(e) => updatePermission(user.id, 'trucking', e.target.value)}
+            disabled={!isAdmin}
+          >
+            {permissionOptions.map(opt => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        
+        <div className="mobile-permission-group">
+          <label className="mobile-permission-label">Finance Access</label>
+          <select
+            className="mobile-permission-select"
+            value={getPermissionLevel(user.finance_can_view, user.finance_can_write, user.finance_can_delete)}
+            onChange={(e) => updatePermission(user.id, 'finance', e.target.value)}
+            disabled={!isAdmin}
+          >
+            {permissionOptions.map(opt => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+    </div>
+  )
+
   return (
     <div className="user-management-page">
       {/* Header */}
@@ -323,18 +433,7 @@ export default function UserManagement() {
             </button>
           )}
           
-          <label className="filter-date-label">
-            Ending To:
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => {
-                setEndDate(e.target.value)
-                setCurrentPage(1)
-              }}
-              className="filter-date-input"
-            />
-          </label>
+          
           
           <div className="search-wrapper">
             <i className="fi fi-rs-search search-icon"></i>
@@ -350,30 +449,11 @@ export default function UserManagement() {
             />
           </div>
           
-          <div className="page-indicator">
-            {currentPage}/{totalPages}
-          </div>
           
-          <div className="page-arrows">
-            <button 
-              className="arrow-btn"
-              onClick={() => goToPage(currentPage - 1)}
-              disabled={currentPage === 1}
-            >
-              &lt;
-            </button>
-            <button 
-              className="arrow-btn"
-              onClick={() => goToPage(currentPage + 1)}
-              disabled={currentPage === totalPages}
-            >
-              &gt;
-            </button>
-          </div>
         </div>
       </div>
 
-      {/* User Table */}
+      {/* Desktop Table */}
       <div className="user-table-wrapper">
         <table className="user-table">
           <thead>
@@ -398,7 +478,7 @@ export default function UserManagement() {
             ) : currentUsers.length > 0 ? (
               currentUsers.map((user, index) => (
                 <tr key={user.id}>
-                  <td>{(currentPage - 1) * rowsPerPage + index}</td>
+                  <td>{(currentPage - 1) * rowsPerPage + index + 1}</td>
                   <td>{user.full_name || 'N/A'}</td>
                   <td>{user.email}</td>
                   
@@ -498,6 +578,23 @@ export default function UserManagement() {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* Mobile Cards */}
+      <div className="mobile-user-cards">
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '2rem' }}>
+            Loading users...
+          </div>
+        ) : currentUsers.length > 0 ? (
+          currentUsers.map((user, index) => (
+            <MobileUserCard key={user.id} user={user} index={index} />
+          ))
+        ) : (
+          <div style={{ textAlign: 'center', padding: '2rem' }}>
+            No users found
+          </div>
+        )}
       </div>
 
       {/* Pagination */}

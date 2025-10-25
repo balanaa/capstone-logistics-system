@@ -18,7 +18,6 @@ export default function GeneralInfoEditOverlay({
   // General shipment information fields
   const [portOfLoading, setPortOfLoading] = React.useState(initialValues.port_of_loading || '')
   const [portOfDischarge, setPortOfDischarge] = React.useState(initialValues.port_of_discharge || '')
-  const [eta, setEta] = React.useState(initialValues.eta || '')
   const [supplierShipper, setSupplierShipper] = React.useState(initialValues.supplier_shipper || '')
   const [containerNo, setContainerNo] = React.useState(initialValues.container_no || '')
   const [containerSizeType, setContainerSizeType] = React.useState(initialValues.container_size_type || '')
@@ -78,7 +77,6 @@ export default function GeneralInfoEditOverlay({
   const fillDummyData = () => {
     setPortOfLoading('Port of Loading Sample')
     setPortOfDischarge('Port of Discharge Sample')
-    setEta('2025-02-02')
     setSupplierShipper('Supplier/Shipper Sample')
     setContainerNo('CONTAINER123')
     setContainerSizeType('1×20\' RF')
@@ -122,7 +120,6 @@ export default function GeneralInfoEditOverlay({
     const values = {
       port_of_loading: portOfLoading,
       port_of_discharge: portOfDischarge,
-      eta: eta,
       supplier_shipper: supplierShipper,
       container_no: containerNo,
       container_size_type: containerSizeType,
@@ -178,15 +175,6 @@ export default function GeneralInfoEditOverlay({
                         type="text"
                         value={portOfDischarge}
                         onChange={(e) => setPortOfDischarge(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="form-group">
-                      <label>ETA</label>
-                      <input
-                        type="date"
-                        value={eta}
-                        onChange={(e) => setEta(e.target.value)}
                       />
                     </div>
 

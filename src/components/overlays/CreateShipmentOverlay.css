@@ -11,7 +11,7 @@
 .cso-modal {
   background: #fff;
   width: 95vw;
-  max-width: 1400px;
+  max-width: 1800px;
   height: 90vh;
   padding: 0;
   border-radius: 10px;
@@ -42,6 +42,7 @@
   align-items: center;
   gap: 16px;
 }
+
 
 .cso-header-title {
   font-size: 1.5rem;
@@ -75,11 +76,12 @@
 
 .cso-body {
   display: grid;
-  grid-template-columns: minmax(450px, 550px) 1fr;
-  grid-gap: 16px;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
   padding: 20px;
-  height: calc(100% - 120px);
-  overflow: hidden;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .cso-footer {
@@ -131,19 +133,37 @@
 
 /* Container/Seal Table Styles */
 .cargo-table { width: 100%; border-collapse: separate; border-spacing: 0; }
-.cargo-table thead tr { display: grid; grid-template-columns: 1fr 1fr auto; gap: 0.5em; margin-bottom: 0.75em; }
+.cargo-table thead tr { display: grid; grid-template-columns: 1fr 1fr 3rem; gap: 0.5em; margin-bottom: 0.75em; }
 .cargo-table thead th { text-align: left; padding: 0; font-weight: normal; font-size: 0.875rem; color: #1f2937; }
-.cargo-table tbody tr { display: grid; grid-template-columns: 1fr 1fr auto; gap: 0.5em; padding-bottom: 0.5em; border-bottom: 1px solid #eee; }
-.cargo-table tbody tr:last-child { border-bottom: none; }
+.cargo-table tbody tr { display: grid; grid-template-columns: 1fr 1fr 3rem; gap: 0.5em; padding-bottom: 0.5em; }
 .cargo-table td { padding: 0; }
-.cargo-table input { width: 100%; height: 3rem; padding: 0 0.625em; font-size: 0.875rem !important; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+.cargo-table input { width: 100%; height: 3rem; padding: 0 0.625em; font-size: 1rem !important; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+.cargo-table .delete-pair-btn { height: 3rem; width: 3rem; padding: 0; border: none; background: #f44336; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: white; transition: background 0.2s; }
+.cargo-table .delete-pair-btn:hover { background: #da190b; }
+.cargo-table .delete-pair-btn:disabled { background: #ccc; opacity: 0.5; cursor: not-allowed; }
+.cargo-table .delete-pair-btn i { font-size: 1rem; color: white; }
 
 /* Invoice Table Styles - More compact for line items */
 .invoice-table { width: 100%; border-collapse: separate; border-spacing: 0; }
-.invoice-table thead tr { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 0.5em; margin-bottom: 0.75em; }
-.invoice-table thead th { text-align: left; padding: 0; font-weight: normal; font-size: 0.875rem; color: #1f2937; }
-.invoice-table tbody tr { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 0.5em; padding-bottom: 0.5em; border-bottom: 1px solid #eee; }
+.invoice-table thead tr { 
+  display: grid; 
+  grid-template-columns: 0.22fr 2fr 1fr 1fr 1fr 2.25rem; 
+  gap: 0.5em; 
+  margin-bottom: 0.75em; 
+}
+.invoice-table thead th { 
+  text-align: left; 
+  padding: 0; 
+  font-weight: normal; 
+  font-size: 0.875rem; 
+  color: #1f2937; 
+}
+.invoice-table tbody tr { display: grid; grid-template-columns: 0.22fr 2fr 1fr 1fr 1fr 2.25rem; gap: 0.5em; padding: 0.5em 0em; }
 .invoice-table tbody tr:last-child { border-bottom: none; }
+.invoice-table tbody tr:hover { background-color: #e0f2fe; }
+
+/* Focus styles for keyboard navigation - same as hover */
+.invoice-table tbody tr:focus-within { background-color: #e0f2fe; }
 .invoice-table td { padding: 0; }
 .invoice-table input { width: 100%; height: 2.25rem; padding: 0 0.5em; font-size: 0.875rem !important; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
 
@@ -183,6 +203,11 @@
   background: #da190b;
 }
 
+/* Focus styles for keyboard navigation - same as hover */
+.invoice-delete-btn:not(:disabled):focus {
+  background: #da190b;
+}
+
 .invoice-delete-btn i {
   font-size: 0.875rem;
 }
@@ -213,6 +238,11 @@
   background: #da190b;
 }
 
+/* Focus styles for keyboard navigation - same as hover */
+.packing-delete-btn:not(:disabled):focus {
+  background: #da190b;
+}
+
 .packing-delete-btn i {
   font-size: 0.875rem;
 }
@@ -228,14 +258,15 @@
 .add-pair-btn { 
   margin-top: 0.75em; 
   padding: 0.75em 1em; 
-  background: #f3f4f6; 
-  border: 1px solid #d1d5db; 
+  background: #005CAB; 
+  border: none;
   border-radius: 4px; 
   cursor: pointer; 
   font-size: 0.9rem; 
   width: 100%; 
   text-align: center; 
   display: block; 
+  color: #fff;
 }
 
 /* Delete Button in Table */
@@ -290,4 +321,97 @@
   box-sizing: border-box;
 }
 
+/* Mobile - Fit modal to screen */
+@media (max-width: 768px) {
+  .cso-modal {
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: 100vw !important;
+    border-radius: 0 !important;
+  }
+}
+
+/* Calculated input styling - looks like input but uneditable */
+.calculated-input {
+  padding: 0 0.5em;
+  height: 3rem;
+  background-color: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  color: #6b7280;
+  font-family: inherit;
+  box-sizing: border-box;
+  cursor: not-allowed;
+  user-select: none;
+  min-width: 6rem;
+  max-width: 8rem;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  position: relative;
+  text-align: right;
+}
+
+.calculated-input::before {
+  content: "Calc: ";
+  font-weight: 500;
+  color: #0369a1;
+  font-size: 0.95rem;
+  margin-right: auto;
+}
+
+.calculated-input .calc-number {
+  font-weight: 500;
+  color: #0369a1;
+  font-size: 0.95rem;
+  margin-left: auto;
+}
+
+/* Totals input fields - right-aligned text */
+.invoice-totals-mobile input[type="text"] {
+  text-align: right;
+}
+
+/* Desktop totals layout */
+@media (min-width: 969px) {
+  .invoice-totals-mobile {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 1rem !important;
+  }
+  
+  .invoice-totals-mobile .totals-row {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 0.5rem !important;
+    align-items: center !important;
+  }
+  
+  .calculated-input {
+    flex: 1;
+    min-width: auto;
+    max-width: none;
+  }
+}
+
+/* Mobile totals layout */
+@media (max-width: 968px) {
+  .invoice-totals-mobile {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1rem !important;
+  }
+  
+  .invoice-totals-mobile .totals-row {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+  
+  .calculated-input {
+    min-width: 100%;
+    max-width: 100%;
+  }
+}
 

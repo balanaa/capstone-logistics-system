@@ -1,18 +1,14 @@
 import React from 'react'
-import './CreateShipmentOverlay.css'
+import DocumentUploadOverlay from './DocumentUploadOverlay'
 import { supabase } from '../../services/supabase/client'
-import { upsertPro, insertDocument } from '../../services/supabase/documents'
+import { upsertPro, insertDocument, logDocumentAction } from '../../services/supabase/documents'
+import {
+  handleDecimalNumberInput,
+  handleWholeNumberInput,
+  numberInputProps,
+} from '../../utils/numberInputHandlers'
 
-const ACCEPTED_TYPES = [
-  'image/jpeg',
-  'image/png',
-  'application/pdf',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-]
-
-// Combined Packing List Upload + Edit Overlay
-// Left: File upload/preview | Right: Line items table + totals
+// Packing List Upload + Edit Overlay using generic DocumentUploadOverlay
 export default function PackingListUploadAndEditOverlay({
   title,
   proNumber,
@@ -22,12 +18,6 @@ export default function PackingListUploadAndEditOverlay({
   // Upload state
   const [uploading, setUploading] = React.useState(false)
   const [uploadError, setUploadError] = React.useState('')
-  
-  // File handling
-  const [file, setFile] = React.useState(null)
-  const [previewUrl, setPreviewUrl] = React.useState('')
-  const [error, setError] = React.useState('')
-  const inputRef = React.useRef(null)
 
   // Line items (no header fields for packing list)
   const [items, setItems] = React.useState([{ product: '', quantity: '', netWeight: '', grossWeight: '' }])
@@ -37,35 +27,81 @@ export default function PackingListUploadAndEditOverlay({
   const [totalNetWeight, setTotalNetWeight] = React.useState('')
   const [totalGrossWeight, setTotalGrossWeight] = React.useState('')
 
+  // Calculated totals state
+  const [calculatedTotalQuantity, setCalculatedTotalQuantity] = React.useState(0)
+  const [calculatedTotalNetWeight, setCalculatedTotalNetWeight] = React.useState(0)
+  const [calculatedTotalGrossWeight, setCalculatedTotalGrossWeight] = React.useState(0)
+
+  // Calculate totals from line items
   React.useEffect(() => {
-    return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl)
-    }
-  }, [previewUrl])
+    const totalQty = items.reduce((sum, item) => {
+      const qty = parseFloat((item.quantity || '').toString().replace(/,/g, '')) || 0
+      return sum + qty
+    }, 0)
+    
+    const totalNet = items.reduce((sum, item) => {
+      const net = parseFloat((item.netWeight || '').toString().replace(/,/g, '')) || 0
+      return sum + net
+    }, 0)
+    
+    const totalGross = items.reduce((sum, item) => {
+      const gross = parseFloat((item.grossWeight || '').toString().replace(/,/g, '')) || 0
+      return sum + gross
+    }, 0)
+    
+    // Round final results to 2 decimal places using banking standards
+    setCalculatedTotalQuantity(Math.round(totalQty * 100) / 100)
+    setCalculatedTotalNetWeight(Math.round(totalNet * 100) / 100)
+    setCalculatedTotalGrossWeight(Math.round(totalGross * 100) / 100)
+  }, [items])
 
-  const handlePick = () => inputRef.current?.click()
+  // Format calculated values using global number handlers
+  const [formattedCalculatedQuantity, setFormattedCalculatedQuantity] = React.useState('0')
+  const [formattedCalculatedNetWeight, setFormattedCalculatedNetWeight] = React.useState('0')
+  const [formattedCalculatedGrossWeight, setFormattedCalculatedGrossWeight] = React.useState('0')
 
-  const onFiles = (files) => {
-    const list = Array.from(files || [])
-    if (!list.length) return
-    const f = list[0]
-    if (!ACCEPTED_TYPES.includes(f.type)) {
-      setError(`Unsupported type: ${f.type}`)
-      return
-    }
-    setError('')
-    setFile(f)
-    const url = URL.createObjectURL(f)
-    setPreviewUrl(url)
-  }
+  // Format calculated values using global number handlers
+  React.useEffect(() => {
+    // Use global handlers to format the calculated values
+    let formattedQty = ''
+    let formattedNet = ''
+    let formattedGross = ''
+    
+    // Format quantity using whole number handler
+    handleWholeNumberInput(calculatedTotalQuantity.toString(), (value) => {
+      formattedQty = value
+    })
+    
+    // Format weights using decimal number handler
+    handleDecimalNumberInput(calculatedTotalNetWeight.toString(), (value) => {
+      formattedNet = value
+    })
+    
+    handleDecimalNumberInput(calculatedTotalGrossWeight.toString(), (value) => {
+      formattedGross = value
+    })
+    
+    setFormattedCalculatedQuantity(formattedQty)
+    setFormattedCalculatedNetWeight(formattedNet)
+    setFormattedCalculatedGrossWeight(formattedGross)
+  }, [calculatedTotalQuantity, calculatedTotalNetWeight, calculatedTotalGrossWeight])
 
-  const onDrop = (e) => {
-    e.preventDefault(); e.stopPropagation()
-    if (e.dataTransfer?.files?.length) onFiles(e.dataTransfer.files)
-  }
+  // Validation state
+  const [fieldErrors, setFieldErrors] = React.useState({})
 
-  const ext = (file?.name || '').split('.').pop()?.toLowerCase() || ''
-  const canEmbed = ext === 'pdf' || ext === 'png' || ext === 'jpg' || ext === 'jpeg'
+  // Validation helper function
+  const getFieldStyles = (fieldKey) => ({
+    label: { color: fieldErrors[fieldKey] ? '#dc2626' : 'inherit' },
+    input: {
+      borderColor: fieldErrors[fieldKey] ? '#dc2626' : '#d1d5db',
+      borderWidth: fieldErrors[fieldKey] ? '2px' : '1px',
+    },
+    error: fieldErrors[fieldKey] ? (
+      <div style={{ color: '#dc2626', fontSize: '0.875rem', marginTop: '0.25rem' }}>
+        {fieldErrors[fieldKey]}
+      </div>
+    ) : null,
+  })
 
   const handleItemChange = (idx, field, value) => {
     setItems(prev => prev.map((item, i) => {
@@ -89,29 +125,176 @@ export default function PackingListUploadAndEditOverlay({
 
   const fillDummyData = () => {
     setItems([
-      { product: 'Sample Product A', quantity: '50', netWeight: '450.5', grossWeight: '500.0' },
-      { product: 'Sample Product B', quantity: '30', netWeight: '280.0', grossWeight: '320.5' },
-      { product: 'Sample Product C', quantity: '20', netWeight: '190.5', grossWeight: '220.0' }
+      { product: 'NB CHEESE SANDWICH 190G', quantity: '92', netWeight: '209.76', grossWeight: '230.74' },
+      { product: 'NB JALAPENOS 720ML', quantity: '100', netWeight: '864.00', grossWeight: '950.40' },
+      { product: 'NB GB SANDWICH BISCUITS 208G', quantity: '18', netWeight: '44.93', grossWeight: '49.42' },
+      { product: 'NB BOTANY CLASSIC BWASH PURE LAVENDERIL', quantity: '60', netWeight: '540.00', grossWeight: '594.00' },
+      { product: 'NB MUSHROM & CREAM SPAGHETTI 220G EA', quantity: '150', netWeight: '132.00', grossWeight: '145.20' },
+      { product: 'NB FABRIC SOFTENER LAVENDER BLOOM 2.1L', quantity: '80', netWeight: '1136.64', grossWeight: '1250.30' },
+      { product: 'NB ALOE 500ML', quantity: '160', netWeight: '1600.00', grossWeight: '1760.00' },
+      { product: 'NB BLACKRICE & NUT 1.5L', quantity: '120', netWeight: '2160.00', grossWeight: '2376.00' },
+      { product: 'NB GB MIX NUT 400G', quantity: '50', netWeight: '160.00', grossWeight: '176.00' },
+      { product: 'NB STATIONERY PERMANENT MARKER', quantity: '10', netWeight: '10.50', grossWeight: '11.55' },
+      { product: 'NB GB WHITEBOARD MARKER 3S', quantity: '10', netWeight: '8.20', grossWeight: '9.02' },
+      { product: 'NB GB PVC BATHROOM SHOES', quantity: '6', netWeight: '13.20', grossWeight: '14.52' },
+      { product: 'NB MEDIUM BLEND COFFEE 227G', quantity: '40', netWeight: '136.20', grossWeight: '149.82' },
+      { product: 'NB COLOMBIA AMERICANO BLACK 2.1L', quantity: '120', netWeight: '1080.00', grossWeight: '1188.00' },
+      { product: 'NB DAILY MOISTURE SHAMPOO 1500ML', quantity: '64', netWeight: '659.20', grossWeight: '725.12' },
+      { product: 'NB 1 DRAWER', quantity: '4', netWeight: '22.62', grossWeight: '24.88' },
+      { product: 'NB ROASTED SESAME 200G', quantity: '100', netWeight: '224.00', grossWeight: '246.40' },
+      { product: 'NB SWEET COATED SNACKS 280G', quantity: '92', netWeight: '206.08', grossWeight: '226.69' },
+      { product: 'NB POTATO PANCAKE MIX 200G', quantity: '70', netWeight: '168.00', grossWeight: '184.80' },
+      { product: 'NB BLUEBERRY GRANOLA CEREAL 600G', quantity: '75', netWeight: '360.00', grossWeight: '396.00' },
+      { product: 'NB BEEF BONE STOCK 500G', quantity: '108', netWeight: '864.00', grossWeight: '950.40' },
+      { product: 'NB COLOMBIA AMERICANO SWEET 2.1L', quantity: '200', netWeight: '1776.00', grossWeight: '1953.60' },
+      { product: 'NB GB SQUID INK CREAM SPAGHETTI SAUCE180', quantity: '100', netWeight: '190.00', grossWeight: '209.00' },
+      { product: 'NB WASHABLE PAPER TOWEL 150 SHTS', quantity: '40', netWeight: '145.20', grossWeight: '168.14' }
     ])
-    setTotalQuantity('100')
-    setTotalNetWeight('921.0')
-    setTotalGrossWeight('1040.5')
+    setTotalQuantity('1869')
+    setTotalNetWeight('12710.53')
+    setTotalGrossWeight('13990.00')
   }
+  
 
   const removeItem = (idx) => {
     if (items.length <= 1) return
     setItems(prev => prev.filter((_, i) => i !== idx))
   }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    if (!file) {
-      setError('Please select a file first')
-      return
+  // Auto-clear validation errors when fields are filled
+  React.useEffect(() => {
+    const newErrors = { ...fieldErrors }
+    let hasChanges = false
+
+    // Check totals fields
+    const totalsFields = {
+      totalQuantity,
+      totalNetWeight,
+      totalGrossWeight,
     }
+
+    Object.keys(totalsFields).forEach((key) => {
+      if (fieldErrors[key] && totalsFields[key] && totalsFields[key].toString().trim() !== '') {
+        delete newErrors[key]
+        hasChanges = true
+      }
+    })
+
+    // Check table row fields - all or nothing validation
+    items.forEach((item, idx) => {
+      const fields = ['product', 'quantity', 'netWeight', 'grossWeight']
+      fields.forEach((field) => {
+        const fieldKey = `item_${idx}_${field}`
+        const fieldValue = (item[field] || '').toString().trim()
+        if (fieldErrors[fieldKey] && fieldValue !== '') {
+          delete newErrors[fieldKey]
+          hasChanges = true
+        }
+      })
+    })
+
+    // Check if at least one complete row exists - clear items error if complete row exists
+    const hasCompleteRow = items.some(item => {
+      const product = (item.product || '').toString().trim()
+      const quantity = (item.quantity || '').toString().trim()
+      const netWeight = (item.netWeight || '').toString().trim()
+      const grossWeight = (item.grossWeight || '').toString().trim()
+      return product !== '' && quantity !== '' && netWeight !== '' && grossWeight !== ''
+    })
     
+    if (fieldErrors.items && hasCompleteRow) {
+      delete newErrors.items
+      hasChanges = true
+    }
+
+    if (hasChanges) {
+      setFieldErrors(newErrors)
+    }
+  }, [totalQuantity, totalNetWeight, totalGrossWeight, items, fieldErrors])
+
+  const handleSubmit = async (file, formData) => {
     setUploading(true)
     setUploadError('')
+    setFieldErrors({})
+
+    const errors = {}
+
+    // File validation - require file
+    if (!file) {
+      errors.file = 'A file is required'
+    }
+
+    // Required totals validation
+    const requiredTotals = [
+      { key: 'totalQuantity', label: 'Total Quantity' },
+      { key: 'totalNetWeight', label: 'Total Net Weight' },
+      { key: 'totalGrossWeight', label: 'Total Gross Weight' },
+    ]
+
+    const totalsValues = {
+      totalQuantity,
+      totalNetWeight,
+      totalGrossWeight,
+    }
+
+    requiredTotals.forEach((field) => {
+      if (!totalsValues[field.key] || totalsValues[field.key].toString().trim() === '') {
+        errors[field.key] = `${field.label} is required`
+      }
+    })
+
+    // All or nothing table validation
+    items.forEach((item, idx) => {
+      const product = (item.product || '').toString().trim()
+      const quantity = (item.quantity || '').toString().trim()
+      const netWeight = (item.netWeight || '').toString().trim()
+      const grossWeight = (item.grossWeight || '').toString().trim()
+
+      const hasAnyValue = product !== '' || quantity !== '' || netWeight !== '' || grossWeight !== ''
+
+      if (hasAnyValue) {
+        if (product === '') errors[`item_${idx}_product`] = 'Product is required'
+        if (quantity === '') errors[`item_${idx}_quantity`] = 'Quantity is required'
+        if (netWeight === '') errors[`item_${idx}_netWeight`] = 'Net Weight is required'
+        if (grossWeight === '') errors[`item_${idx}_grossWeight`] = 'Gross Weight is required'
+      }
+    })
+
+    // Check if at least one complete row exists
+    const hasCompleteRow = items.some(item => {
+      const product = (item.product || '').toString().trim()
+      const quantity = (item.quantity || '').toString().trim()
+      const netWeight = (item.netWeight || '').toString().trim()
+      const grossWeight = (item.grossWeight || '').toString().trim()
+      return product !== '' && quantity !== '' && netWeight !== '' && grossWeight !== ''
+    })
+    
+    if (!hasCompleteRow) {
+      errors.items = 'At least one complete product row is required'
+    }
+
+    // Check if calculated and manual totals match
+    const manualQty = parseFloat((totalQuantity || '').toString().replace(/,/g, '')) || 0
+    const manualNet = parseFloat((totalNetWeight || '').toString().replace(/,/g, '')) || 0
+    const manualGross = parseFloat((totalGrossWeight || '').toString().replace(/,/g, '')) || 0
+    
+    if (manualQty !== calculatedTotalQuantity) {
+      errors.totalQuantityMismatch = `Total Quantity mismatch: Calculated (${calculatedTotalQuantity}) vs Input (${manualQty})`
+    }
+    
+    if (manualNet !== calculatedTotalNetWeight) {
+      errors.totalNetWeightMismatch = `Total Net Weight mismatch: Calculated (${calculatedTotalNetWeight.toFixed(2)}) vs Input (${manualNet.toFixed(2)})`
+    }
+    
+    if (manualGross !== calculatedTotalGrossWeight) {
+      errors.totalGrossWeightMismatch = `Total Gross Weight mismatch: Calculated (${calculatedTotalGrossWeight.toFixed(2)}) vs Input (${manualGross.toFixed(2)})`
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors)
+      setUploading(false)
+      return
+    }
     
     try {
       // 1) Upload file to storage
@@ -122,7 +305,7 @@ export default function PackingListUploadAndEditOverlay({
       const timeTag = `${HH}${MM}${SS}`
       const safePro = String(proNumber).replace(/[^a-zA-Z0-9._-]/g, '_')
       const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
-      const path = `shipment/${timeTag}-${safePro}-PACKING-LIST-${safeName}`
+      const path = `shipment/${timeTag}-${safePro}-PL-${safeName}`
       
       const { error: upErr } = await supabase.storage
         .from('documents')
@@ -140,15 +323,29 @@ export default function PackingListUploadAndEditOverlay({
         department: 'shipment',
         documentType: 'packing_list',
         filePath: path,
-        uploadedBy: userId
+        uploadedBy: userId,
+        actionType: 'document_data_uploaded' // Upload to existing PRO
       })
 
       // 4) Insert document_fields (totals only - no header fields)
       const fieldRows = []
       const pushNumber = (key, val) => {
-        const n = Number(val)
+        const cleaned = val.toString().replace(/,/g, '')
+        const n = Number(cleaned)
+        console.log(`[PackingList Upload] ${key}:`, {
+          original: val,
+          cleaned: cleaned,
+          number: n,
+          isFinite: Number.isFinite(n)
+        })
         if (Number.isFinite(n)) fieldRows.push({ canonical_key: key, value_number: n })
       }
+      
+      console.log('[PackingList Upload] Processing totals:', {
+        totalQuantity,
+        totalNetWeight,
+        totalGrossWeight
+      })
       
       pushNumber('total_quantity', totalQuantity)
       pushNumber('total_net_weight', totalNetWeight)
@@ -162,18 +359,44 @@ export default function PackingListUploadAndEditOverlay({
       }
 
       // 5) Insert document_items (line items)
+      console.log('[PackingList Upload] Processing line items:', items)
+      
       const itemRows = items
         .filter(item => item.product || item.quantity || item.netWeight || item.grossWeight)
-        .map((item, idx) => ({
-          document_id: documentId,
-          line_no: idx + 1,
-          product: item.product || null,
-          quantity: item.quantity ? Number(item.quantity) : null,
-          net_weight: item.netWeight ? Number(item.netWeight) : null,
-          gross_weight: item.grossWeight ? Number(item.grossWeight) : null
-        }))
+        .map((item, idx) => {
+          const processedItem = {
+            document_id: documentId,
+            line_no: idx + 1,
+            product: item.product || null,
+            quantity: item.quantity ? Number(item.quantity.toString().replace(/,/g, '')) : null,
+            net_weight: item.netWeight ? Number(item.netWeight.toString().replace(/,/g, '')) : null,
+            gross_weight: item.grossWeight ? Number(item.grossWeight.toString().replace(/,/g, '')) : null
+          }
+          
+          console.log(`[PackingList Upload] Line ${idx + 1}:`, {
+            original: {
+              product: item.product,
+              quantity: item.quantity,
+              netWeight: item.netWeight,
+              grossWeight: item.grossWeight
+            },
+            processed: {
+              product: processedItem.product,
+              quantity: processedItem.quantity,
+              net_weight: processedItem.net_weight,
+              gross_weight: processedItem.gross_weight
+            }
+          })
+          
+          return processedItem
+        })
 
       if (itemRows.length) {
+        console.log('[PackingList Upload] Final data being sent to Supabase:', {
+          document_fields: fieldRows,
+          document_items: itemRows
+        })
+        
         const { error: itemsErr } = await supabase
           .from('document_items')
           .insert(itemRows)
@@ -191,250 +414,220 @@ export default function PackingListUploadAndEditOverlay({
   }
 
   return (
-    <div className="cso-backdrop" onClick={onClose}>
-      <div className="cso-modal" onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
-        <div className="cso-header">
-          <div className="cso-header-left">
-            <h2 className="cso-header-title">{title || 'Upload Packing List'}</h2>
-          </div>
-          <div className="cso-header-right">
-            <button className="cso-close-btn" onClick={onClose} type="button">✕</button>
-          </div>
-        </div>
+    <DocumentUploadOverlay
+      title={title || 'Upload Packing List'}
+      proNumber={proNumber}
+      onClose={onClose}
+      onSubmit={handleSubmit}
+      uploading={uploading}
+      error={uploadError}
+      className="packing-list-green"
+    >
+      <div>
+        <div>
+          {/* Packing List Line Items */}
+          <div className="packing-section">
+            <h3>Packing List Items</h3>
+            
+            <div style={{ overflowX: 'auto' }}>
+              <table className="invoice-table">
+                <thead>
+                  <tr>
+                    <th style={{ width: '0.22fr' }}></th>
+                    <th>Product</th>
+                    <th>Quantity</th>
+                    <th>Net Weight</th>
+                    <th>Gross Weight</th>
+                    <th style={{ width: '60px' }}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((item, idx) => (
+                    <tr key={idx}>
+                      <td style={{ textAlign: 'center', padding: '0.5em', color: '#6b7280', fontSize: '0.875rem' }}>
+                        {idx + 1}
+                      </td>
+                      <td>
+                        <input
+                          type="text"
+                          value={item.product}
+                          onChange={(e) => handleItemChange(idx, 'product', e.target.value)}
+                          placeholder="Product description"
+                          style={getFieldStyles(`item_${idx}_product`).input}
+                        />
+                        {getFieldStyles(`item_${idx}_product`).error}
+                      </td>
+                      <td>
+                        <input
+                          {...numberInputProps}
+                          value={item.quantity}
+                          onChange={(e) => handleWholeNumberInput(e.target.value, (value) => handleItemChange(idx, 'quantity', value))}
+                          placeholder="0"
+                          style={getFieldStyles(`item_${idx}_quantity`).input}
+                        />
+                        {getFieldStyles(`item_${idx}_quantity`).error}
+                      </td>
+                      <td>
+                        <input
+                          {...numberInputProps}
+                          value={item.netWeight}
+                          onChange={(e) => handleDecimalNumberInput(e.target.value, (value) => handleItemChange(idx, 'netWeight', value))}
+                          placeholder="0.00"
+                          style={getFieldStyles(`item_${idx}_netWeight`).input}
+                        />
+                        {getFieldStyles(`item_${idx}_netWeight`).error}
+                      </td>
+                      <td>
+                        <input
+                          {...numberInputProps}
+                          value={item.grossWeight}
+                          onChange={(e) => handleDecimalNumberInput(e.target.value, (value) => handleItemChange(idx, 'grossWeight', value))}
+                          placeholder="0.00"
+                          style={getFieldStyles(`item_${idx}_grossWeight`).input}
+                        />
+                        {getFieldStyles(`item_${idx}_grossWeight`).error}
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          onClick={() => removeItem(idx)}
+                          disabled={items.length <= 1}
+                          className="packing-delete-btn"
+                        >
+                          <i className="fi fi-rs-trash"></i>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-        <div className="cso-body">
-          
-          {/* Left side - File upload/preview */}
-          <div className="cso-left" onDragOver={(e) => { e.preventDefault(); e.stopPropagation() }} onDrop={onDrop}>
-            {!previewUrl ? (
-              <div className="cso-drop" role="button" tabIndex={0} onClick={handlePick} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handlePick() }}>
-                <strong>Upload Packing List Document</strong>
-                <div>Drag & drop or click to choose</div>
-                <div className="cso-accept">Accepted: jpg, png, pdf, docx, xlsx</div>
-                <input ref={inputRef} type="file" accept={ACCEPTED_TYPES.join(',')} onChange={(e) => onFiles(e.target.files)} style={{ display: 'none' }} />
-              </div>
-            ) : (
-              <div className="cso-preview">
-                <div className="cso-filename">{file?.name}</div>
-                {canEmbed ? (
-                  ext === 'pdf' ? (
-                    <iframe title={file?.name} src={previewUrl} className="cso-frame" />
-                  ) : (
-                    <img alt={file?.name} src={previewUrl} className="cso-image" />
-                  )
-                ) : (
-                  <div className="cso-fallback">Preview unavailable. Selected: {file?.name}</div>
-                )}
-                <button
-                  type="button"
-                  onClick={() => { setFile(null); setPreviewUrl(''); setError('') }}
-                  style={{
-                    marginTop: '0.5rem',
-                    padding: '0.5rem 1rem',
-                    background: '#fee2e2',
-                    border: '1px solid #fca5a5',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontSize: '0.9rem',
-                    color: '#991b1b'
-                  }}
-                >
-                  Remove File
-                </button>
+            <button
+              type="button"
+              onClick={addItem}
+              className="add-pair-btn"
+            >
+              + Add Item
+            </button>
+            {fieldErrors.items && (
+              <div style={{ color: '#dc2626', fontSize: '0.875rem', marginTop: '0.5rem' }}>
+                {fieldErrors.items}
               </div>
             )}
           </div>
 
-          {/* Right side - Line items + totals form */}
-          <div className="cso-right">
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-              
-              {/* Line Items */}
-              <div style={{ flex: 1, overflow: 'auto', marginBottom: '1rem' }}>
-                <h3 style={{ marginTop: 0, marginBottom: '1rem', fontSize: '1rem', fontWeight: 600, color: '#333' }}>Line Items</h3>
-                
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-                    <thead>
-                      <tr style={{ borderBottom: '2px solid #ddd' }}>
-                        <th style={{ textAlign: 'left', padding: '0.5rem', fontWeight: 600 }}>Product</th>
-                        <th style={{ textAlign: 'left', padding: '0.5rem', fontWeight: 600, width: '80px' }}>Qty</th>
-                        <th style={{ textAlign: 'left', padding: '0.5rem', fontWeight: 600, width: '100px' }}>Net Wt (KGS)</th>
-                        <th style={{ textAlign: 'left', padding: '0.5rem', fontWeight: 600, width: '100px' }}>Gross Wt (KGS)</th>
-                        <th style={{ width: '60px' }}></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {items.map((item, idx) => (
-                        <tr key={idx} style={{ borderBottom: '1px solid #eee' }}>
-                          <td style={{ padding: '0.5rem' }}>
-                            <input
-                              type="text"
-                              value={item.product}
-                              onChange={(e) => handleItemChange(idx, 'product', e.target.value)}
-                              placeholder="Product description"
-                              style={{ width: '100%', padding: '0.4rem', border: '1px solid #ddd', borderRadius: '4px' }}
-                            />
-                          </td>
-                          <td style={{ padding: '0.5rem' }}>
-                            <input
-                              type="number"
-                              value={item.quantity}
-                              onChange={(e) => handleItemChange(idx, 'quantity', e.target.value)}
-                              placeholder="0"
-                              style={{ width: '100%', padding: '0.4rem', border: '1px solid #ddd', borderRadius: '4px' }}
-                            />
-                          </td>
-                          <td style={{ padding: '0.5rem' }}>
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={item.netWeight}
-                              onChange={(e) => handleItemChange(idx, 'netWeight', e.target.value)}
-                              placeholder="0.00"
-                              style={{ width: '100%', padding: '0.4rem', border: '1px solid #ddd', borderRadius: '4px' }}
-                            />
-                          </td>
-                          <td style={{ padding: '0.5rem' }}>
-                            <input
-                              type="number"
-                              step="0.01"
-                              value={item.grossWeight}
-                              onChange={(e) => handleItemChange(idx, 'grossWeight', e.target.value)}
-                              placeholder="0.00"
-                              style={{ width: '100%', padding: '0.4rem', border: '1px solid #ddd', borderRadius: '4px' }}
-                            />
-                          </td>
-                          <td style={{ padding: '0.5rem', textAlign: 'center' }}>
-                            <button
-                              type="button"
-                              onClick={() => removeItem(idx)}
-                              disabled={items.length <= 1}
-                              style={{ 
-                                padding: '0.3rem 0.6rem', 
-                                fontSize: '0.8rem', 
-                                color: '#a00',
-                                background: 'none',
-                                border: '1px solid #ddd',
-                                borderRadius: '4px',
-                                cursor: items.length > 1 ? 'pointer' : 'not-allowed',
-                                opacity: items.length > 1 ? 1 : 0.5
-                              }}
-                            >
-                              ✕
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
-                  <button
-                    type="button"
-                    onClick={addItem}
+          {/* Totals Section */}
+          <div className="packing-section-with-border">
+            <h3>Totals</h3>
+            
+            <div className="packing-totals-mobile">
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label style={getFieldStyles('totalQuantity').label}>
+                  Total Quantity <span style={{ color: 'red' }}>*</span>
+                </label>
+                <div className="totals-row">
+                  <span className="calculated-input">
+                    <span className="calc-number">{formattedCalculatedQuantity}</span>
+                  </span>
+                  <input
+                    type="text"
+                    value={totalQuantity}
+                    onChange={(e) => handleWholeNumberInput(e.target.value, setTotalQuantity)}
                     style={{
-                      padding: '0.5rem 1rem',
-                      background: '#f3f4f6',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontSize: '0.9rem'
+                      ...numberInputProps.style,
+                      ...getFieldStyles('totalQuantity').input,
+                      flex: '1 1 0%',
+                      appearance: 'none',
+                      borderColor: getFieldStyles('totalQuantity').input.borderColor,
+                      borderWidth: getFieldStyles('totalQuantity').input.borderWidth,
                     }}
-                  >
-                    + Add Item
-                  </button>
-                  <button
-                    type="button"
-                    onClick={add3Items}
+                  />
+                </div>
+                {getFieldStyles('totalQuantity').error}
+                {fieldErrors.totalQuantityMismatch && (
+                  <div style={{ color: '#dc2626', fontSize: '0.875rem', marginTop: '0.25rem' }}>
+                    {fieldErrors.totalQuantityMismatch}
+                  </div>
+                )}
+              </div>
+
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label style={getFieldStyles('totalNetWeight').label}>
+                  Total Net Weight <span style={{ color: 'red' }}>*</span>
+                </label>
+                <div className="totals-row">
+                  <span className="calculated-input">
+                    <span className="calc-number">{formattedCalculatedNetWeight}</span>
+                  </span>
+                  <input
+                    type="text"
+                    value={totalNetWeight}
+                    onChange={(e) => handleDecimalNumberInput(e.target.value, setTotalNetWeight)}
                     style={{
-                      padding: '0.5rem 1rem',
-                      background: '#e0f2fe',
-                      border: '1px solid #7dd3fc',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontSize: '0.9rem',
-                      color: '#0369a1'
+                      ...numberInputProps.style,
+                      ...getFieldStyles('totalNetWeight').input,
+                      flex: '1 1 0%',
+                      appearance: 'none',
+                      borderColor: getFieldStyles('totalNetWeight').input.borderColor,
+                      borderWidth: getFieldStyles('totalNetWeight').input.borderWidth,
                     }}
-                  >
-                    + Add 3 Rows
-                  </button>
+                  />
                 </div>
+                {getFieldStyles('totalNetWeight').error}
+                {fieldErrors.totalNetWeightMismatch && (
+                  <div style={{ color: '#dc2626', fontSize: '0.875rem', marginTop: '0.25rem' }}>
+                    {fieldErrors.totalNetWeightMismatch}
+                  </div>
+                )}
               </div>
 
-              {/* Totals (manual input) */}
-              <div style={{ borderTop: '2px solid #ddd', paddingTop: '1rem', marginBottom: '1rem' }}>
-                <h3 style={{ marginTop: 0, marginBottom: '1rem', fontSize: '1rem', fontWeight: 600, color: '#333' }}>Totals</h3>
-                
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label>Total Quantity</label>
-                    <input
-                      type="number"
-                      value={totalQuantity}
-                      onChange={(e) => setTotalQuantity(e.target.value)}
-                      placeholder="0"
-                    />
-                  </div>
-
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label>Total Net Wt (KGS)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={totalNetWeight}
-                      onChange={(e) => setTotalNetWeight(e.target.value)}
-                      placeholder="0.00"
-                    />
-                  </div>
-
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label>Total Gross Wt (KGS)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={totalGrossWeight}
-                      onChange={(e) => setTotalGrossWeight(e.target.value)}
-                      placeholder="0.00"
-                    />
-                  </div>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label style={getFieldStyles('totalGrossWeight').label}>
+                  Total Gross Weight <span style={{ color: 'red' }}>*</span>
+                </label>
+                <div className="totals-row">
+                  <span className="calculated-input">
+                    <span className="calc-number">{formattedCalculatedGrossWeight}</span>
+                  </span>
+                  <input
+                    type="text"
+                    value={totalGrossWeight}
+                    onChange={(e) => handleDecimalNumberInput(e.target.value, setTotalGrossWeight)}
+                    style={{
+                      ...numberInputProps.style,
+                      ...getFieldStyles('totalGrossWeight').input,
+                      flex: '1 1 0%',
+                      appearance: 'none',
+                      borderColor: getFieldStyles('totalGrossWeight').input.borderColor,
+                      borderWidth: getFieldStyles('totalGrossWeight').input.borderWidth,
+                    }}
+                  />
                 </div>
+                {getFieldStyles('totalGrossWeight').error}
+                {fieldErrors.totalGrossWeightMismatch && (
+                  <div style={{ color: '#dc2626', fontSize: '0.875rem', marginTop: '0.25rem' }}>
+                    {fieldErrors.totalGrossWeightMismatch}
+                  </div>
+                )}
               </div>
-
-              {/* Debug - Dummy Data Button */}
-              {error && <div className="cso-error">{error}</div>}
-              {uploadError && <div className="cso-error">{uploadError}</div>}
-              <div style={{ marginTop: 'auto', paddingTop: '1rem' }}>
-                <button 
-                  className="cso-btn" 
-                  type="button" 
-                  onClick={fillDummyData}
-                  style={{ background: '#fef3c7', borderColor: '#fbbf24', width: '100%' }}
-                  disabled={uploading}
-                >
-                  Fill Dummy Data
-                </button>
-              </div>
-            </form>
+            </div>
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="cso-footer">
-          <div className="cso-footer-left">
-            {/* New document - no saved by info yet */}
-          </div>
-          <div className="cso-footer-right">
-            <button className="cso-btn" type="button" onClick={onClose} disabled={uploading}>Cancel</button>
-            <button className="cso-btn cso-primary" type="button" onClick={handleSubmit} disabled={uploading}>
-              {uploading ? 'Uploading...' : 'Submit'}
-            </button>
-          </div>
+        {/* Debug - Dummy Data Button */}
+        <div style={{ marginTop: 'auto', paddingTop: '1rem' }}>
+          <button 
+            className="duo-btn" 
+            type="button" 
+            onClick={fillDummyData}
+            style={{ background: '#fef3c7', borderColor: '#fbbf24', width: '100%' }}
+            disabled={uploading}
+          >
+            Fill Dummy Data
+          </button>
         </div>
       </div>
-    </div>
+    </DocumentUploadOverlay>
   )
 }
-

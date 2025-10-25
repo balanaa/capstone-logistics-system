@@ -1,18 +1,15 @@
 import React from 'react'
-import './CreateShipmentOverlay.css'
+import DocumentUploadOverlay from './DocumentUploadOverlay'
 import { supabase } from '../../services/supabase/client'
 import { upsertPro, insertDocument } from '../../services/supabase/documents'
+import {
+  handleDecimalNumberInput,
+  handleWholeNumberInput,
+  handleDateInput,
+  numberInputProps,
+} from '../../utils/numberInputHandlers'
 
-const ACCEPTED_TYPES = [
-  'image/jpeg',
-  'image/png',
-  'application/pdf',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-]
-
-// Combined Invoice Upload + Edit Overlay
-// Left: File upload/preview | Right: Invoice form with line items
+// Invoice Upload + Edit Overlay using generic DocumentUploadOverlay
 export default function InvoiceUploadAndEditOverlay({
   title,
   proNumber,
@@ -22,11 +19,6 @@ export default function InvoiceUploadAndEditOverlay({
   // Upload state
   const [uploading, setUploading] = React.useState(false)
   const [uploadError, setUploadError] = React.useState('')
-  // File handling
-  const [file, setFile] = React.useState(null)
-  const [previewUrl, setPreviewUrl] = React.useState('')
-  const [error, setError] = React.useState('')
-  const inputRef = React.useRef(null)
 
   // Document info fields
   const [invoiceNo, setInvoiceNo] = React.useState('')
@@ -41,35 +33,120 @@ export default function InvoiceUploadAndEditOverlay({
   const [totalQuantity, setTotalQuantity] = React.useState('')
   const [totalAmount, setTotalAmount] = React.useState('')
 
+  // Calculated totals from line items
+  const [calculatedTotalQuantity, setCalculatedTotalQuantity] = React.useState(0)
+  const [calculatedTotalAmount, setCalculatedTotalAmount] = React.useState(0)
+
+  // Field validation state
+  const [fieldErrors, setFieldErrors] = React.useState({})
+
+  // Validation helper functions
+  const getFieldStyles = (fieldName) => {
+    const hasError = fieldErrors[fieldName]
+    return {
+      input: {
+        borderColor: hasError ? '#ef4444' : undefined,
+        borderWidth: hasError ? '2px' : undefined,
+      },
+      label: {
+        color: hasError ? '#ef4444' : undefined,
+      }
+    }
+  }
+
+  const getItemFieldStyles = (idx, fieldName) => {
+    const errorKey = `item_${idx}_${fieldName}`
+    const hasError = fieldErrors[errorKey]
+    return {
+      borderColor: hasError ? '#ef4444' : undefined,
+      borderWidth: hasError ? '2px' : undefined,
+    }
+  }
+
+  // Auto-clear validation errors when user types
   React.useEffect(() => {
-    return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl)
+    const newErrors = { ...fieldErrors }
+    let hasChanges = false
+
+    // Check individual fields
+    const fieldValues = {
+      invoiceNo,
+      invoiceDate,
+      currency,
+      totalQuantity,
+      totalAmount,
     }
-  }, [previewUrl])
 
-  const handlePick = () => inputRef.current?.click()
+    Object.keys(fieldValues).forEach((key) => {
+      if (
+        fieldErrors[key] &&
+        fieldValues[key] &&
+        fieldValues[key].toString().trim() !== ''
+      ) {
+        delete newErrors[key]
+        hasChanges = true
+      }
+    })
 
-  const onFiles = (files) => {
-    const list = Array.from(files || [])
-    if (!list.length) return
-    const f = list[0]
-    if (!ACCEPTED_TYPES.includes(f.type)) {
-      setError(`Unsupported type: ${f.type}`)
-      return
+    // Check table row fields
+    items.forEach((item, idx) => {
+      const fields = ['product', 'quantity', 'unitPrice', 'amount']
+      fields.forEach((field) => {
+        const fieldKey = `item_${idx}_${field}`
+        const fieldValue = (item[field] || '').toString().trim()
+        if (fieldErrors[fieldKey] && fieldValue !== '') {
+          delete newErrors[fieldKey]
+          hasChanges = true
+        }
+      })
+    })
+
+    if (hasChanges) {
+      setFieldErrors(newErrors)
     }
-    setError('')
-    setFile(f)
-    const url = URL.createObjectURL(f)
-    setPreviewUrl(url)
-  }
+  }, [
+    invoiceNo,
+    invoiceDate,
+    currency,
+    totalQuantity,
+    totalAmount,
+    items,
+    fieldErrors,
+  ])
 
-  const onDrop = (e) => {
-    e.preventDefault(); e.stopPropagation()
-    if (e.dataTransfer?.files?.length) onFiles(e.dataTransfer.files)
-  }
+  // Calculate totals from line items
+  React.useEffect(() => {
+    // Calculate totals with full precision, then round final result
+    const totalQty = items.reduce((sum, item) => {
+      const qty = parseFloat((item.quantity || '').toString().replace(/,/g, '')) || 0
+      return sum + qty
+    }, 0)
+    
+    const totalAmt = items.reduce((sum, item) => {
+      const amt = parseFloat((item.amount || '').toString().replace(/,/g, '')) || 0
+      return sum + amt
+    }, 0)
+    
+    // Round final results to 2 decimal places using banking standards
+    setCalculatedTotalQuantity(Math.round(totalQty * 100) / 100)
+    setCalculatedTotalAmount(Math.round(totalAmt * 100) / 100)
+  }, [items])
 
-  const ext = (file?.name || '').split('.').pop()?.toLowerCase() || ''
-  const canEmbed = ext === 'pdf' || ext === 'png' || ext === 'jpg' || ext === 'jpeg'
+  // Format calculated values using global number handlers
+  const [formattedCalculatedQuantity, setFormattedCalculatedQuantity] = React.useState('0')
+  const [formattedCalculatedAmount, setFormattedCalculatedAmount] = React.useState('0')
+
+  React.useEffect(() => {
+    handleWholeNumberInput(calculatedTotalQuantity.toString(), (value) => {
+      setFormattedCalculatedQuantity(value)
+    })
+  }, [calculatedTotalQuantity])
+
+  React.useEffect(() => {
+    handleDecimalNumberInput(calculatedTotalAmount.toString(), (value) => {
+      setFormattedCalculatedAmount(value)
+    })
+  }, [calculatedTotalAmount])
 
   const handleItemChange = (idx, field, value) => {
     setItems(prev => prev.map((item, i) => {
@@ -93,32 +170,123 @@ export default function InvoiceUploadAndEditOverlay({
 
   const fillDummyData = () => {
     setInvoiceNo('INV-2025-001')
-    setInvoiceDate('2025-04-15')
+    setInvoiceDate('04/15/25')
     setIncoterms('FOB')
     setCurrency('USD')
     setItems([
-      { product: 'Sample Product A', quantity: '10', unitPrice: '500.00', amount: '5000.00' },
-      { product: 'Sample Product B', quantity: '20', unitPrice: '300.00', amount: '6000.00' },
-      { product: 'Sample Product C', quantity: '15', unitPrice: '400.00', amount: '6000.00' }
+      { product: 'NB CHEESE SANDWICH 190G', quantity: '92', unitPrice: '0.96', amount: '1059.84' },
+      { product: 'NB JALAPENOS 720ML', quantity: '100', unitPrice: '1.25', amount: '1500.00' },
+      { product: 'NB GB SANDWICH BISCUITS 208G', quantity: '18', unitPrice: '2.95', amount: '637.20' },
+      { product: 'NB BOTANY CLASSIC BWASH PURE LAVENDERIL', quantity: '60', unitPrice: '3.07', amount: '1473.60' },
+      { product: 'NB MUSHROM & CREAM SPAGHETTI 220G EA', quantity: '150', unitPrice: '1.34', amount: '804.00' },
+      { product: 'NB FABRIC SOFTENER LAVENDER BLOOM 2.1L', quantity: '80', unitPrice: '1.38', amount: '441.60' },
+      { product: 'NB ALOE 500ML', quantity: '160', unitPrice: '0.63', amount: '2016.00' },
+      { product: 'NB BLACKRICE & NUT 1.5L', quantity: '120', unitPrice: '1.30', amount: '1872.00' },
+      { product: 'NB GB MIX NUT 400G', quantity: '50', unitPrice: '0.03', amount: '12.00' },
+      { product: 'NB STATIONERY PERMANENT MARKER', quantity: '10', unitPrice: '0.69', amount: '165.60' },
+      { product: 'NB GB WHITEBOARD MARKER 3S', quantity: '10', unitPrice: '0.70', amount: '168.00' },
+      { product: 'NB GB PVC BATHROOM SHOES', quantity: '6', unitPrice: '2.29', amount: '109.92' },
+      { product: 'NB MEDIUM BLEND COFFEE 227G', quantity: '40', unitPrice: '2.30', amount: '1104.00' },
+      { product: 'NB COLOMBIA AMERICANO BLACK 2.1L', quantity: '120', unitPrice: '1.97', amount: '945.60' },
+      { product: 'NB DAILY MOISTURE SHAMPOO 1500ML', quantity: '64', unitPrice: '4.12', amount: '1582.08' },
+      { product: 'NB 1 DRAWER', quantity: '4', unitPrice: '4.63', amount: '55.56' },
+      { product: 'NB ROASTED SESAME 200G', quantity: '100', unitPrice: '1.80', amount: '1440.00' },
+      { product: 'NB SWEET COATED SNACKS 280G', quantity: '92', unitPrice: '1.01', amount: '743.36' },
+      { product: 'NB POTATO PANCAKE MIX 200G', quantity: '70', unitPrice: '1.25', amount: '1050.00' },
+      { product: 'NB BLUEBERRY GRANOLA CEREAL 600G', quantity: '75', unitPrice: '3.23', amount: '1938.00' },
+      { product: 'NB BEEF BONE STOCK 500G', quantity: '108', unitPrice: '0.67', amount: '1157.76' },
+      { product: 'NB COLOMBIA AMERICANO SWEET 2.1L', quantity: '200', unitPrice: '1.95', amount: '1560.00' },
+      { product: 'NB GB SQUID INK CREAM SPAGHETTI SAUCE180', quantity: '100', unitPrice: '1.20', amount: '1200.00' },
+      { product: 'NB WASHABLE PAPER TOWEL 150 SHTS', quantity: '40', unitPrice: '3.44', amount: '825.60' }
     ])
-    setTotalQuantity('45')
-    setTotalAmount('17000.00')
+    setTotalQuantity('1869')
+    setTotalAmount('23861.72')
   }
+  
 
   const removeItem = (idx) => {
     if (items.length <= 1) return
     setItems(prev => prev.filter((_, i) => i !== idx))
   }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    if (!file) {
-      setError('Please select a file first')
+  const handleSubmit = async (file, formData) => {
+    setUploading(true)
+    setUploadError('')
+    
+    // Basic validation
+    const newErrors = {}
+    
+    // Validate required fields (Incoterms is optional)
+    if (!invoiceNo.trim()) newErrors.invoiceNo = 'Invoice number is required'
+    if (!invoiceDate.trim()) newErrors.invoiceDate = 'Invoice date is required'
+    if (!currency.trim()) newErrors.currency = 'Currency is required'
+    if (!totalQuantity.trim()) newErrors.totalQuantity = 'Total quantity is required'
+    if (!totalAmount.trim()) newErrors.totalAmount = 'Total amount is required'
+    
+    // Validate file upload
+    if (!file || !file.name) {
+      newErrors.file = 'Please select a file to upload'
+    }
+    
+    // Smart row validation - all or nothing for each row
+    items.forEach((item, idx) => {
+      const product = (item.product || '').toString().trim()
+      const quantity = (item.quantity || '').toString().trim()
+      const unitPrice = (item.unitPrice || '').toString().trim()
+      const amount = (item.amount || '').toString().trim()
+      
+      const hasAnyValue = product !== '' || quantity !== '' || unitPrice !== '' || amount !== ''
+      
+      if (hasAnyValue) {
+        // If any field has value, ALL fields in this row become required
+        if (product === '') {
+          newErrors[`item_${idx}_product`] = 'Product is required'
+        }
+        if (quantity === '') {
+          newErrors[`item_${idx}_quantity`] = 'Quantity is required'
+        }
+        if (unitPrice === '') {
+          newErrors[`item_${idx}_unitPrice`] = 'Unit Price is required'
+        }
+        if (amount === '') {
+          newErrors[`item_${idx}_amount`] = 'Amount is required'
+        }
+      }
+    })
+    
+    // Check if at least one complete row exists
+    const hasCompleteRow = items.some(item => {
+      const product = (item.product || '').toString().trim()
+      const quantity = (item.quantity || '').toString().trim()
+      const unitPrice = (item.unitPrice || '').toString().trim()
+      const amount = (item.amount || '').toString().trim()
+      return product !== '' && quantity !== '' && unitPrice !== '' && amount !== ''
+    })
+    
+    if (!hasCompleteRow) {
+      newErrors.items = 'At least one complete product row is required'
+    }
+    
+    // Validate calculated vs manual totals
+    const manualQty = parseFloat((totalQuantity || '').toString().replace(/,/g, '')) || 0
+    const manualAmt = parseFloat((totalAmount || '').toString().replace(/,/g, '')) || 0
+    
+    if (manualQty !== calculatedTotalQuantity) {
+      newErrors.totalQuantityMismatch = `Total Quantity mismatch: Calculated (${calculatedTotalQuantity}) vs Input (${manualQty})`
+    }
+    
+    if (manualAmt !== calculatedTotalAmount) {
+      newErrors.totalAmountMismatch = `Total Amount mismatch: Calculated (${calculatedTotalAmount.toFixed(2)}) vs Input (${manualAmt.toFixed(2)})`
+    }
+    
+    if (Object.keys(newErrors).length > 0) {
+      setFieldErrors(newErrors)
+      setUploading(false)
       return
     }
     
-    setUploading(true)
-    setUploadError('')
+    // Clear errors if validation passes
+    setFieldErrors({})
     
     try {
       // 1) Upload file to storage
@@ -142,12 +310,23 @@ export default function InvoiceUploadAndEditOverlay({
       // 3) Insert document row
       const { data: sess } = await supabase.auth.getSession()
       const userId = sess?.session?.user?.id
+      
+      // Debug: Log timestamp before document creation
+      const now = new Date()
+      const localTime = now.toLocaleString('en-SG', { timeZone: 'Asia/Singapore' })
+      const utcTime = now.toISOString()
+      console.log('Green Invoice Upload Debug:')
+      console.log('- Current time (local):', localTime)
+      console.log('- Current time (UTC):', utcTime)
+      console.log('- User ID:', userId)
+      
       const documentId = await insertDocument({
         proNumber: proNumber,
         department: 'shipment',
         documentType: 'invoice',
         filePath: path,
-        uploadedBy: userId
+        uploadedBy: userId,
+        actionType: 'document_data_uploaded' // Upload to existing PRO
       })
       
       // Also update doc_no in documents table
@@ -214,274 +393,315 @@ export default function InvoiceUploadAndEditOverlay({
   }
 
   return (
-    <div className="cso-backdrop" onClick={onClose}>
-      <div className="cso-modal" onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
-        <div className="cso-header">
-          <div className="cso-header-left">
-            <h2 className="cso-header-title">{title || 'Upload Commercial Invoice'}</h2>
-          </div>
-          <div className="cso-header-right">
-            <button className="cso-close-btn" onClick={onClose} type="button">✕</button>
-          </div>
-        </div>
+    <DocumentUploadOverlay
+      title={title || 'Upload Commercial Invoice'}
+      proNumber={proNumber}
+      onClose={onClose}
+      onSubmit={handleSubmit}
+      uploading={uploading}
+      error={uploadError || fieldErrors.file}
+      className="invoice-upload-overlay"
+    >
+      <div>
+        <div>
+          {/* Top section - Invoice Information */}
+          <div className="invoice-section" style={{ marginBottom: '1.5rem' }}>
+            <h3>Invoice Information</h3>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 1rem' }}>
+               <div className="form-group">
+                 <label style={getFieldStyles('invoiceNo').label}>Invoice No. <span style={{ color: '#ef4444' }}>*</span></label>
+                 <input
+                   type="text"
+                   value={invoiceNo}
+                   onChange={(e) => setInvoiceNo(e.target.value)}
+                   style={getFieldStyles('invoiceNo').input}
+                 />
+                 {fieldErrors.invoiceNo && (
+                   <div style={{ color: '#ef4444', fontSize: '0.875rem', marginTop: '0.25rem' }}>
+                     {fieldErrors.invoiceNo}
+                   </div>
+                 )}
+               </div>
 
-        <div className="cso-body">
-          
-          {/* Left side - File upload/preview */}
-          <div className="cso-left" onDragOver={(e) => { e.preventDefault(); e.stopPropagation() }} onDrop={onDrop}>
-            {!previewUrl ? (
-              <div className="cso-drop" role="button" tabIndex={0} onClick={handlePick} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handlePick() }}>
-                <strong>Upload Invoice Document</strong>
-                <div>Drag & drop or click to choose</div>
-                <div className="cso-accept">Accepted: jpg, png, pdf, docx, xlsx</div>
-                <input ref={inputRef} type="file" accept={ACCEPTED_TYPES.join(',')} onChange={(e) => onFiles(e.target.files)} style={{ display: 'none' }} />
-              </div>
-            ) : (
-              <div className="cso-preview">
-                <div className="cso-filename">{file?.name}</div>
-                {canEmbed ? (
-                  ext === 'pdf' ? (
-                    <iframe title={file?.name} src={previewUrl} className="cso-frame" />
-                  ) : (
-                    <img alt={file?.name} src={previewUrl} className="cso-image" />
-                  )
-                ) : (
-                  <div className="cso-fallback">Preview unavailable. Selected: {file?.name}</div>
+               <div className="form-group">
+                 <label>Incoterms</label>
+                 <input
+                   type="text"
+                   value={incoterms}
+                   onChange={(e) => setIncoterms(e.target.value)}
+                 />
+               </div>
+
+              <div className="form-group">
+                <label style={getFieldStyles('invoiceDate').label}>Invoice Date <span style={{ color: '#ef4444' }}>*</span></label>
+                <input
+                  type="text"
+                  placeholder="MM/DD/YY"
+                  value={invoiceDate}
+                  onChange={(e) => handleDateInput(e.target.value, setInvoiceDate)}
+                  maxLength={8}
+                  style={getFieldStyles('invoiceDate').input}
+                />
+                {fieldErrors.invoiceDate && (
+                  <div style={{ color: '#ef4444', fontSize: '0.875rem', marginTop: '0.25rem' }}>
+                    {fieldErrors.invoiceDate}
+                  </div>
                 )}
-                <button
-                  type="button"
-                  onClick={() => { setFile(null); setPreviewUrl(''); setError('') }}
-                  style={{
-                    marginTop: '0.5rem',
-                    padding: '0.5rem 1rem',
-                    background: '#fee2e2',
-                    border: '1px solid #fca5a5',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontSize: '0.9rem',
-                    color: '#991b1b'
-                  }}
-                >
-                  Remove File
-                </button>
+              </div>
+
+              <div className="form-group">
+                <label style={getFieldStyles('currency').label}>Currency <span style={{ color: '#ef4444' }}>*</span></label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="text"
+                    value={currency}
+                    onChange={(e) => setCurrency(e.target.value)}
+                    list="currency-options"
+                    style={{ width: '100%', paddingRight: '2.5rem', ...getFieldStyles('currency').input }}
+                  />
+                  <select
+                    value={currency}
+                    onChange={(e) => setCurrency(e.target.value)}
+                    style={{ 
+                      position: 'absolute', 
+                      right: '0.5rem', 
+                      top: '50%', 
+                      transform: 'translateY(-50%)',
+                      border: 'none',
+                      background: 'transparent',
+                      fontSize: '0.875rem',
+                      cursor: 'pointer',
+                      width: '2rem'
+                    }}
+                  >
+                    <option value="USD">USD</option>
+                    <option value="EUR">EUR</option>
+                    <option value="PHP">PHP</option>
+                    <option value="GBP">GBP</option>
+                    <option value="JPY">JPY</option>
+                    <option value="CNY">CNY</option>
+                  </select>
+                  <datalist id="currency-options">
+                    <option value="USD" />
+                    <option value="EUR" />
+                    <option value="PHP" />
+                    <option value="GBP" />
+                    <option value="JPY" />
+                    <option value="CNY" />
+                  </datalist>
+                </div>
+                {fieldErrors.currency && (
+                  <div style={{ color: '#ef4444', fontSize: '0.875rem', marginTop: '0.25rem' }}>
+                    {fieldErrors.currency}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Middle section - Product Details */}
+          <div className="invoice-section">
+            <h3>Product Details</h3>
+            
+            <div style={{ overflowX: 'auto' }}>
+              <table className="invoice-table">
+                <thead>
+                  <tr>
+                    <th style={{ width: '0.22fr' }}></th>
+                    <th>Product</th>
+                    <th>Quantity</th>
+                    <th>Unit Price</th>
+                    <th>Amount</th>
+                    <th style={{ width: '60px' }}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((item, idx) => (
+                    <tr key={idx}>
+                      <td style={{ textAlign: 'center', padding: '0.5em', color: '#6b7280', fontSize: '0.875rem' }}>
+                        {idx + 1}
+                      </td>
+                       <td>
+                         <div>
+                           <input
+                             type="text"
+                             value={item.product}
+                             onChange={(e) => handleItemChange(idx, 'product', e.target.value)}
+                             style={getItemFieldStyles(idx, 'product')}
+                           />
+                           {fieldErrors[`item_${idx}_product`] && (
+                             <div style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                               {fieldErrors[`item_${idx}_product`]}
+                             </div>
+                           )}
+                         </div>
+                       </td>
+                       <td>
+                         <div>
+                           <input
+                             type="text"
+                             value={item.quantity}
+                             onChange={(e) => handleWholeNumberInput(e.target.value, (value) => handleItemChange(idx, 'quantity', value))}
+                             {...numberInputProps}
+                             style={{...numberInputProps.style, ...getItemFieldStyles(idx, 'quantity')}}
+                           />
+                           {fieldErrors[`item_${idx}_quantity`] && (
+                             <div style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                               {fieldErrors[`item_${idx}_quantity`]}
+                             </div>
+                           )}
+                         </div>
+                       </td>
+                       <td>
+                         <div>
+                           <input
+                             type="text"
+                             value={item.unitPrice}
+                             onChange={(e) => handleDecimalNumberInput(e.target.value, (value) => handleItemChange(idx, 'unitPrice', value))}
+                             {...numberInputProps}
+                             style={{...numberInputProps.style, ...getItemFieldStyles(idx, 'unitPrice')}}
+                           />
+                           {fieldErrors[`item_${idx}_unitPrice`] && (
+                             <div style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                               {fieldErrors[`item_${idx}_unitPrice`]}
+                             </div>
+                           )}
+                         </div>
+                       </td>
+                       <td>
+                         <div>
+                           <input
+                             type="text"
+                             value={item.amount}
+                             onChange={(e) => handleDecimalNumberInput(e.target.value, (value) => handleItemChange(idx, 'amount', value))}
+                             {...numberInputProps}
+                             style={{...numberInputProps.style, ...getItemFieldStyles(idx, 'amount')}}
+                           />
+                           {fieldErrors[`item_${idx}_amount`] && (
+                             <div style={{ color: '#ef4444', fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                               {fieldErrors[`item_${idx}_amount`]}
+                             </div>
+                           )}
+                         </div>
+                       </td>
+                      <td>
+                        <button
+                          type="button"
+                          onClick={() => removeItem(idx)}
+                          disabled={items.length <= 1}
+                          className="invoice-delete-btn"
+                        >
+                          <i className="fi fi-rs-trash"></i>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <button
+              type="button"
+              onClick={addItem}
+              className="add-pair-btn"
+            >
+              + Add Item
+            </button>
+            {fieldErrors.items && (
+              <div style={{ color: '#ef4444', fontSize: '0.875rem', marginTop: '0.5rem' }}>
+                {fieldErrors.items}
               </div>
             )}
           </div>
 
-          {/* Right side - Invoice form */}
-          <div className="cso-right">
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-              <div style={{ flex: 1, overflow: 'auto', padding: '0 0.75em' }}>
-                {/* Top section - Invoice Information */}
-                <div style={{ marginBottom: '1.5rem' }}>
-                  <h3>Invoice Information</h3>
-                  
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 1rem' }}>
-                    <div className="form-group">
-                      <label>Invoice No.</label>
-                      <input
-                        type="text"
-                        value={invoiceNo}
-                        onChange={(e) => setInvoiceNo(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="form-group">
-                      <label>Incoterms</label>
-                      <input
-                        type="text"
-                        value={incoterms}
-                        onChange={(e) => setIncoterms(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="form-group">
-                      <label>Invoice Date</label>
-                      <input
-                        type="date"
-                        value={invoiceDate}
-                        onChange={(e) => setInvoiceDate(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="form-group">
-                      <label>Currency</label>
-                      <div style={{ position: 'relative' }}>
-                        <input
-                          type="text"
-                          value={currency}
-                          onChange={(e) => setCurrency(e.target.value)}
-                          list="currency-options"
-                          style={{ width: '100%', paddingRight: '2.5rem' }}
-                        />
-                        <select
-                          value={currency}
-                          onChange={(e) => setCurrency(e.target.value)}
-                          style={{ 
-                            position: 'absolute', 
-                            right: '0.5rem', 
-                            top: '50%', 
-                            transform: 'translateY(-50%)',
-                            border: 'none',
-                            background: 'transparent',
-                            fontSize: '0.875rem',
-                            cursor: 'pointer',
-                            width: '2rem'
-                          }}
-                        >
-                          <option value="USD">USD</option>
-                          <option value="EUR">EUR</option>
-                          <option value="PHP">PHP</option>
-                          <option value="GBP">GBP</option>
-                          <option value="JPY">JPY</option>
-                          <option value="CNY">CNY</option>
-                        </select>
-                        <datalist id="currency-options">
-                          <option value="USD" />
-                          <option value="EUR" />
-                          <option value="PHP" />
-                          <option value="GBP" />
-                          <option value="JPY" />
-                          <option value="CNY" />
-                        </datalist>
-                      </div>
-                    </div>
-                  </div>
+          {/* Bottom section - Totals (calculated + manual input) */}
+          <div className="invoice-section">
+            <h3>Totals</h3>
+            
+            {/* Single responsive layout - CSS handles desktop vs mobile */}
+            <div className="invoice-totals-mobile">
+              {/* Total Quantity */}
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label style={getFieldStyles('totalQuantity').label}>Total Quantity <span style={{ color: '#ef4444' }}>*</span></label>
+                <div className="totals-row">
+                  <span className="calculated-input">
+                    <span className="calc-number">{formattedCalculatedQuantity}</span>
+                  </span>
+                  <input
+                    type="text"
+                    value={totalQuantity}
+                    onChange={(e) => handleWholeNumberInput(e.target.value, setTotalQuantity)}
+                    {...numberInputProps}
+                    style={{...numberInputProps.style, ...getFieldStyles('totalQuantity').input, flex: 1}}
+                    placeholder="Manual input"
+                  />
                 </div>
-
-                {/* Middle section - Product Details */}
-                <div className="invoice-section">
-                  <h3>Product Details</h3>
-                  
-                  <div style={{ overflowX: 'auto' }}>
-                    <table className="invoice-table">
-                      <thead>
-                        <tr>
-                          <th>Product</th>
-                          <th>Quantity</th>
-                          <th>Unit Price</th>
-                          <th>Amount</th>
-                          <th></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {items.map((item, idx) => (
-                          <tr key={idx}>
-                            <td>
-                              <input
-                                type="text"
-                                value={item.product}
-                                onChange={(e) => handleItemChange(idx, 'product', e.target.value)}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="number"
-                                value={item.quantity}
-                                onChange={(e) => handleItemChange(idx, 'quantity', e.target.value)}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="number"
-                                step="0.01"
-                                value={item.unitPrice}
-                                onChange={(e) => handleItemChange(idx, 'unitPrice', e.target.value)}
-                              />
-                            </td>
-                            <td>
-                              <input
-                                type="number"
-                                step="0.01"
-                                value={item.amount}
-                                onChange={(e) => handleItemChange(idx, 'amount', e.target.value)}
-                              />
-                            </td>
-                            <td>
-                              <button
-                                type="button"
-                                onClick={() => removeItem(idx)}
-                                disabled={items.length <= 1}
-                                className="invoice-delete-btn"
-                              >
-                                <i className="fi fi-rs-trash"></i>
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                {fieldErrors.totalQuantity && (
+                  <div style={{ color: '#ef4444', fontSize: '0.875rem', marginTop: '0.25rem' }}>
+                    {fieldErrors.totalQuantity}
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={addItem}
-                    className="add-pair-btn"
-                  >
-                    + Add Item
-                  </button>
-                </div>
-
-                {/* Bottom section - Totals (manual input) */}
-                <div className="invoice-section">
-                  <h3>Totals</h3>
-                  
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label>Total Quantity</label>
-                      <input
-                        type="number"
-                        value={totalQuantity}
-                        onChange={(e) => setTotalQuantity(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="form-group" style={{ marginBottom: 0 }}>
-                      <label>Total Amount</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={totalAmount}
-                        onChange={(e) => setTotalAmount(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                </div>
+                )}
               </div>
 
-              {/* Debug - Dummy Data Button */}
-              {error && <div className="cso-error">{error}</div>}
-              {uploadError && <div className="cso-error">{uploadError}</div>}
-              <div style={{ marginTop: 'auto', paddingTop: '1rem', padding: '0 0.75em' }}>
-                <button 
-                  className="cso-btn" 
-                  type="button" 
-                  onClick={fillDummyData}
-                  style={{ background: '#fef3c7', borderColor: '#fbbf24', width: '100%' }}
-                  disabled={uploading}
-                >
-                  Fill Dummy Data
-                </button>
+              {/* Total Amount */}
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label style={getFieldStyles('totalAmount').label}>Total Amount <span style={{ color: '#ef4444' }}>*</span></label>
+                <div className="totals-row">
+                  <span className="calculated-input">
+                    <span className="calc-number">{formattedCalculatedAmount}</span>
+                  </span>
+                  <input
+                    type="text"
+                    value={totalAmount}
+                    onChange={(e) => handleDecimalNumberInput(e.target.value, setTotalAmount)}
+                    {...numberInputProps}
+                    style={{...numberInputProps.style, ...getFieldStyles('totalAmount').input, flex: 1}}
+                    placeholder="Manual input"
+                  />
+                </div>
+                {fieldErrors.totalAmount && (
+                  <div style={{ color: '#ef4444', fontSize: '0.875rem', marginTop: '0.25rem' }}>
+                    {fieldErrors.totalAmount}
+                  </div>
+                )}
               </div>
-            </form>
+            </div>
+
+            {/* Error messages for calculated totals */}
+            {fieldErrors.totalQuantityMismatch && (
+              <div style={{ color: '#ef4444', fontSize: '0.875rem', marginTop: '0.5rem' }}>
+                {fieldErrors.totalQuantityMismatch}
+              </div>
+            )}
+            {fieldErrors.totalAmountMismatch && (
+              <div style={{ color: '#ef4444', fontSize: '0.875rem', marginTop: '0.5rem' }}>
+                {fieldErrors.totalAmountMismatch}
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="cso-footer">
-          <div className="cso-footer-left">
-            {/* New document - no saved by info yet */}
-          </div>
-          <div className="cso-footer-right">
-            <button className="cso-btn" type="button" onClick={onClose} disabled={uploading}>Cancel</button>
-            <button className="cso-btn cso-primary" type="button" onClick={handleSubmit} disabled={uploading}>
-              {uploading ? 'Uploading...' : 'Submit'}
-            </button>
-          </div>
+        {/* Debug - Dummy Data Button */}
+        <div style={{ marginTop: 'auto', paddingTop: '1rem', padding: '0 0.75em' }}>
+          <button 
+            className="duo-btn" 
+            type="button" 
+            onClick={fillDummyData}
+            style={{ 
+              background: '#fef3c7', 
+              borderColor: '#fbbf24', 
+              width: '100%',
+              fontSize: '0.875rem',
+              padding: '0.75rem'
+            }}
+            disabled={uploading}
+          >
+            Fill Dummy Data
+          </button>
         </div>
       </div>
-    </div>
+    </DocumentUploadOverlay>
   )
 }
 

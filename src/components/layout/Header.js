@@ -43,7 +43,7 @@ export default function Header() {
       '/shipment': 'Shipment',
       '/trucking': 'Trucking',
       '/finance': 'Finance',
-      '/analytics': 'Business Analytics',
+      '/analytics': 'Analytics',
       '/user-management': 'User Management'
     }
     
@@ -67,9 +67,16 @@ export default function Header() {
       <h2 className="current-tab">{title}</h2>
       <ul>
         <li>
-          <button type="button" className="icon-button" aria-label="Messages" title="Messages">
+          <a 
+            href="https://mail.yahoo.com/" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="icon-button" 
+            aria-label="Email" 
+            title="Email"
+          >
             <i className="fi fi-rs-envelope" />
-          </button>
+          </a>
         </li>
         <li>
           <button type="button" className="icon-button" aria-label="Notifications" title="Notifications">

@@ -1,9 +1,41 @@
 /* TableList Component Styles (updated) */
 
+/* Search wrapper styles - matching UserManagement design */
+.search-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  position: absolute;
+  left: 0.75rem;
+  color: #888;
+  pointer-events: none;
+  font-size: 0.9rem;
+}
+
+.search-input {
+  padding: 0.45rem 0.8rem 0.45rem 2.25rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  width: 260px;
+  background: #e3f2fd;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #1976d2;
+  background: white;
+}
+
 /* Root wrapper */
 .table-list-root {
   width: 100%;
   font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  container-type: inline-size;
+  container-name: table-container;
 }
 
 /* ---- Top control bar (single line) ---- */
@@ -17,10 +49,26 @@
   /* keep transparent background so the panel is only around the table */
 }
 
-.control-left,
-.control-center,
+/* Hide mobile controls by default */
+.mobile-controls {
+  display: none !important;
+}
+
+/* Show desktop controls by default */
+.control-left {
+  display: flex !important;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.control-center {
+  display: flex !important;
+  align-items: center;
+  gap: 0.6rem;
+}
+
 .control-right {
-  display: flex;
+  display: flex !important;
   align-items: center;
   gap: 0.6rem;
 }
@@ -42,19 +90,39 @@
   border-radius: 6px;
   font-weight: 700;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
 }
 .table-list-add-btn-inline:hover { opacity: .95; }
 
-.table-filter-btn-clear {
-  padding: 0.35rem 0.6rem;
-  background: transparent;
-  color: #374151;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-weight: 700;
-  cursor: pointer;
+/* Button text visibility - show all on desktop */
+.btn-text-create,
+.btn-text-new,
+.btn-text-shipment {
+  display: inline;
 }
-.table-filter-btn-clear:hover { background: #f3f4f6; }
+
+.table-filter-btn-clear {
+  padding: 8px 16px;
+  border: 1px solid #dc3545;
+  background: white;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #dc3545;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.table-filter-btn-clear:hover { 
+  background: #dc3545; 
+  color: white; 
+  border-color: #dc3545; 
+}
 
 /* Center group (dates + search) */
 .control-center .control-date {
@@ -69,12 +137,6 @@
   padding: 0.3rem 0.45rem;
   border: 1px solid #cbd5e1;
   border-radius: 6px;
-}
-.table-list-search-inline {
-  padding: 0.45rem 0.8rem;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  width: 260px;
 }
 
 /* Right group (page indicator + arrows) */
@@ -107,22 +169,148 @@
   border: 1px solid #e6eef0;
 }
 
-/* Table wrapper */
+/* Table wrapper - responsive approach */
 .table-list-wrapper { 
-  overflow-x: auto; 
   background: white;
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.06);
   border: 1px solid #e6eef0;
+  overflow: hidden;
 }
 
 .table-list { 
   width: 100%; 
-  border-collapse: separate; /* Change to separate to allow individual cell borders */
-  border-spacing: 0; /* Remove spacing between cells */
-  min-width: 900px; 
-  /* border-radius: 14px; Rounded corners for the table */
-  overflow: hidden; /* Ensure that rounded corners are visible */
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  display: table;
+}
+
+/* Container-based responsive table behavior */
+/* Wide container: Show all columns in table format */
+@container table-container (min-width: 1200px) {
+  .table-list-wrapper {
+    overflow-x: visible;
+  }
+  
+  .table-list {
+    min-width: auto;
+    display: table;
+  }
+  
+  .table-list th,
+  .table-list td {
+    padding: 0.6rem 0.9rem;
+    white-space: nowrap;
+  }
+}
+
+/* Medium container: Allow horizontal scroll, compact cells */
+@container table-container (min-width: 800px) and (max-width: 1199px) {
+  .table-list-wrapper {
+    overflow-x: auto;
+  }
+  
+  .table-list {
+    min-width: 800px;
+    display: table;
+  }
+  
+  .table-list th,
+  .table-list td {
+    padding: 0.5rem 0.7rem;
+    font-size: 0.9rem;
+  }
+}
+
+/* Narrow container: Card layout for better readability */
+@container table-container (max-width: 799px) {
+  .table-list-wrapper {
+    overflow-x: visible;
+  }
+  
+  .table-list {
+    display: block;
+    min-width: auto;
+  }
+  
+  .table-list thead {
+    display: none;
+  }
+  
+  .table-list tbody {
+    display: block;
+  }
+  
+  .table-list tbody tr {
+    display: block;
+    margin-bottom: 1rem;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border: 1px solid #e6eef0;
+    padding: 1rem;
+  }
+  
+  /* Alternating colors for card layout */
+  .table-list tbody tr:nth-child(odd) {
+    background: var(--lighter-color);
+  }
+  
+  .table-list tbody tr:nth-child(even) {
+    background: var(--background-color);
+  }
+  
+  .table-list tbody tr:hover {
+    background: #f0f8ff !important;
+  }
+  
+  .table-list tbody td {
+    display: block;
+    padding: 0.5rem 0;
+    border: none;
+    background: transparent;
+    position: relative;
+    padding-left: 40%;
+  }
+  
+  /* Match td background to tr background */
+  .table-list tbody tr:nth-child(odd) td {
+    background: var(--lighter-color);
+  }
+  
+  .table-list tbody tr:nth-child(even) td {
+    background: var(--background-color);
+  }
+  
+  .table-list tbody tr:hover td {
+    background: #f0f8ff !important;
+  }
+  
+  .table-list tbody td:before {
+    content: attr(data-label);
+    position: absolute;
+    left: 0;
+    width: 35%;
+    padding-right: 1rem;
+    font-weight: 600;
+    color: #0b4a4a;
+    font-size: 0.85rem;
+  }
+  
+  .table-list tbody td:first-child {
+    padding-left: 0;
+    font-weight: 700;
+    font-size: 1rem;
+    color: #0b4a4a;
+    border-bottom: 1px solid #e6eef0;
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+  
+  .table-list tbody td:first-child:before {
+    display: none;
+  }
 }
 
 .table-list thead { 
@@ -145,11 +333,15 @@
 .table-list td { 
   font-size: 0.95rem; 
   color: #1f2937; 
-  background-color: #DCEEF3; /* Light blue background for rows */
 }
 
-.table-list tbody tr:hover { 
-  background-color: #fbfbfb; 
+/* Desktop: Consistent blue background for all rows */
+.table-list tbody tr td {
+  background-color: var(--lighter-color); /* Light blue for all desktop rows */
+}
+
+.table-list tbody tr:hover td { 
+  background-color: #f0f8ff !important; /* Light hover color */
 }
 
 /* Row arrow */
@@ -159,21 +351,46 @@
 }
 .table-row-arrow:hover { transform: translateX(3px); }
 
+/* Container cell styling for multi-line display */
+.container-cell {
+  vertical-align: top;
+  white-space: pre-line;
+  line-height: 1.4;
+}
+
+.container-line {
+  margin-bottom: 0.2rem;
+  font-size: 0.9rem;
+}
+
+.container-line:last-child {
+  margin-bottom: 0;
+}
+
 /* Status chips */
 .status-chip {
   display:inline-block; padding: .25rem .6rem; border-radius: 999px; font-weight:700; font-size:.9rem;
   color: #fff; min-width: 72px; text-align:center;
 }
 .status-ongoing { background: #f59e0b; }  /* amber */
+.status-filed-boc { background: #3b82f6; } /* blue */
 .status-complete { background: #10b981; } /* green */
-.status-pending { background: #f97316; }  /* orange */
-.status-superseded { background: #6b7280; } /* gray */
 
-/* Bottom pagination (secondary) */
+/* Trucking status chips */
+.status-booking { background: #8b5cf6; } /* purple */
+.status-delivering { background: #f59e0b; } /* amber */
+.status-returned { background: #10b981; } /* green */
+
+/* Finance status chips */
+.status-unpaid { background: #dc2626; color: white; } /* red */
+.status-paid { background: #16a34a; color: white; } /* green */
+
+/* Bottom pagination (secondary) - moved outside table wrapper */
 .table-list-pagination {
   display:flex; align-items:center; justify-content:center; gap: .5rem;
   padding: .9rem 1rem; background: #f8fbfb;
-  border-radius: 0 0 8px 8px;
+  border-radius: 8px;
+  margin-top: 0.6rem;
   flex-wrap:wrap;
 }
 .pagination-btn {
@@ -219,16 +436,421 @@
   background-color: #374151;
 }
 
-/* responsive */
-@media (max-width: 900px) {
-  .table-list-search-inline { width: 150px; }
-  .table-list { min-width: 700px; }
-  .control-center { display: flex; flex-wrap: wrap; gap: .5rem; }
+/* Mobile Layout - 8 Row Structure */
+@container table-container (max-width: 768px) {
+  .table-control-bar {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1rem;
+    background: #f8fbfb;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+  }
   
-  .toast {
-    bottom: 1rem;
-    right: 1rem;
-    left: 1rem;
-    text-align: center;
+  /* Hide desktop controls on mobile */
+  .control-left,
+  .control-center,
+  .control-right {
+    display: none !important;
+  }
+  
+  /* Show mobile controls */
+  .mobile-controls {
+    display: flex !important;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+  }
+  
+  /* Each control row takes full width */
+  .control-row {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  /* Row 1: Department List */
+  .control-row-title {
+    align-items: flex-start;
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  
+  .table-list-title-inline {
+    font-size: 1.25rem;
+    margin: 0;
+    text-align: left;
+  }
+  
+  /* Row 2 & 4: Labels stick to left */
+  .control-row-label {
+    align-items: flex-start;
+  }
+  
+  .control-label {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #083237;
+    text-align: left;
+    margin: 0;
+    padding: 0;
+  }
+  
+  /* Row 3, 5, 6, 7: Inputs full width */
+  .control-row-input {
+    align-items: stretch;
+  }
+  
+  .table-filter-date-inline {
+    width: 100%;
+    padding: 0.75rem;
+    font-size: 1rem;
+    border-radius: 8px;
+    border: 2px solid #e2e8f0;
+    background: white;
+  }
+  
+  .table-filter-date-inline:focus {
+    border-color: var(--accent-color, #1AAFB5);
+    outline: none;
+  }
+  
+  /* Type dropdown full width */
+  .type-dropdown {
+    width: 100%;
+    padding: 0.75rem;
+    font-size: 1rem;
+    border-radius: 8px;
+    border: 2px solid #e2e8f0;
+    background: white;
+  }
+  
+  .type-dropdown:focus {
+    border-color: var(--accent-color, #1AAFB5);
+    outline: none;
+  }
+  
+  /* Search input full width */
+  .search-wrapper {
+    width: 100%;
+    position: relative;
+  }
+  
+  .search-input {
+    width: 100%;
+    padding: 0.75rem 0.8rem 0.75rem 2.5rem;
+    font-size: 1rem;
+    border-radius: 8px;
+    border: 2px solid #e2e8f0;
+    background: white;
+  }
+  
+  .search-input:focus {
+    border-color: var(--accent-color, #1AAFB5);
+    outline: none;
+  }
+  
+  /* Row 8: Clear Filters, Page indicator, and navigation */
+  .control-row-actions {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  
+  .table-filter-btn-clear {
+    padding: 8px 16px;
+    font-size: 14px;
+    border-radius: 4px;
+    border: 1px solid #dc3545;
+    background: white;
+    color: #dc3545;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  
+  .table-filter-btn-clear:hover {
+    background: #dc3545;
+    color: white;
+    border-color: #dc3545;
+  }
+  
+  .page-indicator {
+    font-size: 1rem;
+    min-width: auto;
+    font-weight: 700;
+    color: #0b4a4a;
+  }
+  
+  .page-arrows {
+    display: flex;
+    gap: 0.5rem;
+  }
+  
+  .arrow-btn {
+    padding: 0.6rem 0.9rem;
+    font-size: 1rem;
+    border-radius: 8px;
+    border: 2px solid #d1d5db;
+    background: white;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  
+  .arrow-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  
+  /* Mobile create button styling */
+  .mobile-controls .table-list-add-btn-inline {
+    padding: 0.5rem 0.8rem;
+    font-size: 0.9rem;
+    white-space: nowrap;
+  }
+  
+  /* Hide some button text on very small screens */
+  @media (max-width: 480px) {
+    .mobile-controls .btn-text-new,
+    .mobile-controls .btn-text-shipment {
+      display: none;
+    }
+    
+    .mobile-controls .table-list-add-btn-inline {
+      padding: 0.4rem 0.6rem;
+      font-size: 0.8rem;
+    }
+  }
+}
+
+/* Fallback media queries for browsers that don't support container queries */
+@media (max-width: 768px) {
+  .table-control-bar {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1rem;
+    background: #f8fbfb;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+  }
+  
+  /* Hide desktop controls on mobile */
+  .control-left,
+  .control-center,
+  .control-right {
+    display: none !important;
+  }
+  
+  /* Show mobile controls */
+  .mobile-controls {
+    display: flex !important;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+  }
+  
+  /* Each control row takes full width */
+  .control-row {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  /* Row 1: Department List */
+  .control-row-title {
+    align-items: flex-start;
+    flex-direction: row;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  
+  .table-list-title-inline {
+    font-size: 1.25rem;
+    margin: 0;
+    text-align: left;
+  }
+  
+  /* Row 2 & 4: Labels stick to left */
+  .control-row-label {
+    align-items: flex-start;
+  }
+  
+  .control-label {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #083237;
+    text-align: left;
+    margin: 0;
+    padding: 0;
+  }
+  
+  /* Row 3, 5, 6, 7: Inputs full width */
+  .control-row-input {
+    align-items: stretch;
+  }
+  
+  .table-filter-date-inline {
+    width: 100%;
+    padding: 0.75rem;
+    font-size: 1rem;
+    border-radius: 8px;
+    border: 2px solid #e2e8f0;
+    background: white;
+  }
+  
+  .table-filter-date-inline:focus {
+    border-color: var(--accent-color, #1AAFB5);
+    outline: none;
+  }
+  
+  /* Type dropdown full width */
+  .type-dropdown {
+    width: 100%;
+    padding: 0.75rem;
+    font-size: 1rem;
+    border-radius: 8px;
+    border: 2px solid #e2e8f0;
+    background: white;
+  }
+  
+  .type-dropdown:focus {
+    border-color: var(--accent-color, #1AAFB5);
+    outline: none;
+  }
+  
+  /* Search input full width */
+  .search-wrapper {
+    width: 100%;
+    position: relative;
+  }
+  
+  .search-input {
+    width: 100%;
+    padding: 0.75rem 0.8rem 0.75rem 2.5rem;
+    font-size: 1rem;
+    border-radius: 8px;
+    border: 2px solid #e2e8f0;
+    background: white;
+  }
+  
+  .search-input:focus {
+    border-color: var(--accent-color, #1AAFB5);
+    outline: none;
+  }
+  
+  /* Row 8: Clear Filters, Page indicator, and navigation */
+  .control-row-actions {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  
+  .table-filter-btn-clear {
+    padding: 8px 16px;
+    font-size: 14px;
+    border-radius: 4px;
+    border: 1px solid #dc3545;
+    background: white;
+    color: #dc3545;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  
+  .table-filter-btn-clear:hover {
+    background: #dc3545;
+    color: white;
+    border-color: #dc3545;
+  }
+  
+  .page-indicator {
+    font-size: 1rem;
+    min-width: auto;
+    font-weight: 700;
+    color: #0b4a4a;
+  }
+  
+  .page-arrows {
+    display: flex;
+    gap: 0.5rem;
+  }
+  
+  .arrow-btn {
+    padding: 0.6rem 0.9rem;
+    font-size: 1rem;
+    border-radius: 8px;
+    border: 2px solid #d1d5db;
+    background: white;
+    cursor: pointer;
+    font-weight: 600;
+  }
+  
+  .arrow-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  
+  /* Mobile create button styling */
+  .mobile-controls .table-list-add-btn-inline {
+    padding: 0.5rem 0.8rem;
+    font-size: 0.9rem;
+    white-space: nowrap;
+  }
+  
+  /* Hide some button text on very small screens */
+  @media (max-width: 480px) {
+    .mobile-controls .btn-text-new,
+    .mobile-controls .btn-text-shipment {
+      display: none;
+    }
+    
+    .mobile-controls .table-list-add-btn-inline {
+      padding: 0.4rem 0.6rem;
+      font-size: 0.8rem;
+    }
+  }
+}
+
+/* Medium screens - keep some horizontal layout */
+@container table-container (min-width: 769px) and (max-width: 1000px) {
+  .table-control-bar {
+    flex-wrap: wrap;
+    gap: 0.8rem;
+  }
+  
+  /* Ensure mobile controls are hidden on medium screens */
+  .mobile-controls {
+    display: none !important;
+  }
+  
+  /* Ensure desktop controls are visible */
+  .control-left,
+  .control-center,
+  .control-right {
+    display: flex !important;
+  }
+  
+  .control-center {
+    flex-wrap: wrap;
+    gap: 0.8rem;
+  }
+  
+  .search-input {
+    width: 250px;
   }
 }

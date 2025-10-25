@@ -1,94 +1,100 @@
 import React from 'react'
+import DocumentUploadOverlay from './DocumentUploadOverlay'
 import './CreateShipmentOverlay.css'
-import { supabase } from '../../services/supabase/client'
-import { upsertPro, insertDocument, insertDocumentFields } from '../../services/supabase/documents'
+import { formatDateTime } from '../../utils/dateUtils'
+import { handleDecimalNumberInput, handleWholeNumberInput, handleDecimalNumberInputWithCaret, handleWholeNumberInputWithCaret, handleDateInput, cleanNumberFieldsForDatabase, numberInputProps } from '../../utils/numberInputHandlers'
 
-const ACCEPTED_TYPES = [
-  'image/jpeg',
-  'image/png',
-  'application/pdf',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-]
-
-// Combined BOL Upload + Edit Overlay
-// Left: File upload/preview | Right: BOL form with structured layout
+// BOL-specific upload overlay with structured form layout
 export default function BolUploadAndEditOverlay({
   title,
   proNumber,
+  fileUrl,
+  fileName,
+  initialValues = {},
   onClose,
-  onSuccess
+  onSubmit,
+  updatedAt,
+  updatedBy,
+  uploadedBy
 }) {
-  // Upload state
-  const [uploading, setUploading] = React.useState(false)
-  const [uploadError, setUploadError] = React.useState('')
-  // File handling
-  const [file, setFile] = React.useState(null)
-  const [previewUrl, setPreviewUrl] = React.useState('')
-  const [error, setError] = React.useState('')
-  const inputRef = React.useRef(null)
-
   // Header fields
-  const [blNumber, setBlNumber] = React.useState('')
-  const [shippingLine, setShippingLine] = React.useState('')
-  const [shipper, setShipper] = React.useState('')
-  const [consignee, setConsignee] = React.useState('')
+  const [blNumber, setBlNumber] = React.useState(initialValues.bl_number || '')
+  const [shippingLine, setShippingLine] = React.useState(initialValues.shipping_line || '')
+  const [shipper, setShipper] = React.useState(initialValues.shipper || '')
+  const [consignee, setConsignee] = React.useState(initialValues.consignee || '')
   
   // Vessel info
-  const [vesselName, setVesselName] = React.useState('')
-  const [voyageNo, setVoyageNo] = React.useState('')
+  const [vesselName, setVesselName] = React.useState(initialValues.vessel_name || '')
+  const [voyageNo, setVoyageNo] = React.useState(initialValues.voyage_no || '')
   
   // Ports
-  const [portOfLoading, setPortOfLoading] = React.useState('')
-  const [portOfDischarge, setPortOfDischarge] = React.useState('')
-  const [placeOfDelivery, setPlaceOfDelivery] = React.useState('')
+  const [portOfLoading, setPortOfLoading] = React.useState(initialValues.port_of_loading || '')
+  const [portOfDischarge, setPortOfDischarge] = React.useState(initialValues.port_of_discharge || '')
+  const [placeOfDelivery, setPlaceOfDelivery] = React.useState(initialValues.place_of_delivery || '')
+  
+  // ETA field
+  const [eta, setEta] = React.useState(() => {
+    // Convert date format from "Month DD, YYYY" to "MM/DD/YY" if needed
+    const dateValue = initialValues.eta || ''
+    if (dateValue && dateValue.includes(',')) {
+      // Format: "October 24, 2025" -> "10/24/25"
+      try {
+        const date = new Date(dateValue)
+        if (!isNaN(date.getTime())) {
+          const month = String(date.getMonth() + 1).padStart(2, '0')
+          const day = String(date.getDate()).padStart(2, '0')
+          const year = String(date.getFullYear()).substring(2)
+          return `${month}/${day}/${year}`
+        }
+      } catch (e) {
+        console.warn('Failed to parse ETA date:', dateValue)
+      }
+    }
+    return dateValue
+  })
   
   // Container/Seal pairs
-  const [pairs, setPairs] = React.useState([{ containerNo: '', sealNo: '' }])
+  const [pairs, setContainerPairs] = React.useState(() => {
+    if (Array.isArray(initialValues.container_seal_pairs) && initialValues.container_seal_pairs.length) {
+      return initialValues.container_seal_pairs.map(p => ({ 
+        containerNo: p.containerNo || '', 
+        sealNo: p.sealNo || '' 
+      }))
+    }
+    return [{ containerNo: '', sealNo: '' }]
+  })
   
   // Other fields
-  const [containerSpecs, setContainerSpecs] = React.useState('')
-  const [noOfPackages, setNoOfPackages] = React.useState('')
-  const [packagingKind, setPackagingKind] = React.useState('')
-  const [goodsClassification, setGoodsClassification] = React.useState('')
-  const [descriptionOfGoods, setDescriptionOfGoods] = React.useState('')
-  const [grossWeight, setGrossWeight] = React.useState('')
+  const [containerSpecs, setContainerSpecs] = React.useState(initialValues.container_specs || '')
+  const [noOfPackages, setNoOfPackages] = React.useState(initialValues.no_of_packages || '')
+  const [packagingKind, setPackagingKind] = React.useState(initialValues.packaging_kind || '')
+  const [goodsClassification, setGoodsClassification] = React.useState(initialValues.goods_classification || '')
+  const [descriptionOfGoods, setDescriptionOfGoods] = React.useState(initialValues.description_of_goods || '')
+  const [grossWeight, setGrossWeight] = React.useState(initialValues.gross_weight || '')
   
   const [userEditedPlace, setUserEditedPlace] = React.useState(false)
+  const [fieldErrors, setFieldErrors] = React.useState({})
 
-  React.useEffect(() => {
-    return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl)
-    }
-  }, [previewUrl])
-
-  const handlePick = () => inputRef.current?.click()
-
-  const onFiles = (files) => {
-    const list = Array.from(files || [])
-    if (!list.length) return
-    const f = list[0]
-    if (!ACCEPTED_TYPES.includes(f.type)) {
-      setError(`Unsupported type: ${f.type}`)
-      return
-    }
-    setError('')
-    setFile(f)
-    const url = URL.createObjectURL(f)
-    setPreviewUrl(url)
-  }
-
-  const onDrop = (e) => {
-    e.preventDefault(); e.stopPropagation()
-    if (e.dataTransfer?.files?.length) onFiles(e.dataTransfer.files)
-  }
-
-  const ext = (file?.name || '').split('.').pop()?.toLowerCase() || ''
+  const ext = (fileName || '').split('.').pop()?.toLowerCase() || ''
   const canEmbed = ext === 'pdf' || ext === 'png' || ext === 'jpg' || ext === 'jpeg'
 
-  const addPair = () => setPairs(prev => [...prev, { containerNo: '', sealNo: '' }])
-  const removePair = (idx) => setPairs(prev => (prev.length <= 1 ? prev : prev.filter((_, i) => i !== idx)))
-  const changePair = (idx, field, val) => setPairs(prev => prev.map((p, i) => i === idx ? { ...p, [field]: val } : p))
+  const addPair = () => setContainerPairs(prev => [...prev, { containerNo: '', sealNo: '' }])
+  const removePair = (idx) => setContainerPairs(prev => (prev.length <= 1 ? prev : prev.filter((_, i) => i !== idx)))
+  const changePair = (idx, field, val) => setContainerPairs(prev => prev.map((p, i) => i === idx ? { ...p, [field]: val } : p))
+
+  // Helper function for field styling
+  const getFieldStyles = (fieldKey) => ({
+    label: { color: fieldErrors[fieldKey] ? '#dc2626' : 'inherit' },
+    input: {
+      borderColor: fieldErrors[fieldKey] ? '#dc2626' : '#d1d5db',
+      borderWidth: fieldErrors[fieldKey] ? '2px' : '1px'
+    },
+    error: fieldErrors[fieldKey] ? (
+      <div style={{ color: '#dc2626', fontSize: '0.875rem', marginTop: '0.25rem' }}>
+        {fieldErrors[fieldKey]}
+      </div>
+    ) : null
+  })
 
   // Auto-derive place of delivery from consignee
   const derivePlace = (text) => {
@@ -101,16 +107,53 @@ export default function BolUploadAndEditOverlay({
 
   const handleConsigneeChange = (val) => {
     setConsignee(val)
-    if (!userEditedPlace) {
-      const pod = derivePlace(val)
-      if (pod) setPlaceOfDelivery(pod)
-    }
   }
+
+  // Clear field errors when ANY field value changes (including programmatic changes)
+  React.useEffect(() => {
+    // Clear errors for any field that now has a value
+    const newErrors = { ...fieldErrors }
+    let hasChanges = false
+    
+    // Check all individual fields
+    const fieldValues = {
+      blNumber, shippingLine, shipper, consignee, vesselName, voyageNo, eta,
+      portOfLoading, portOfDischarge, placeOfDelivery, containerSpecs,
+      noOfPackages, packagingKind, goodsClassification, descriptionOfGoods, grossWeight
+    }
+    
+    Object.keys(fieldValues).forEach(key => {
+      if (fieldErrors[key] && fieldValues[key] && fieldValues[key].toString().trim() !== '') {
+        delete newErrors[key]
+        hasChanges = true
+      }
+    })
+    
+    // Clear container pairs error if at least one container number exists (seal is optional)
+    if (fieldErrors.containerPairs && pairs.some(pair => pair.containerNo.trim() !== '')) {
+      delete newErrors.containerPairs
+      hasChanges = true
+    }
+    
+    if (hasChanges) {
+      setFieldErrors(newErrors)
+    }
+  }, [blNumber, shippingLine, shipper, consignee, vesselName, voyageNo, eta, portOfLoading, portOfDischarge, placeOfDelivery, containerSpecs, noOfPackages, packagingKind, goodsClassification, descriptionOfGoods, grossWeight, pairs])
 
   const handlePlaceChange = (val) => {
     setPlaceOfDelivery(val)
     setUserEditedPlace(true)
   }
+
+  // Auto-derive place of delivery when consignee changes (including programmatic changes)
+  React.useEffect(() => {
+    if (!userEditedPlace && consignee) {
+      const pod = derivePlace(consignee)
+      if (pod && placeOfDelivery !== pod) {
+        setPlaceOfDelivery(pod)
+      }
+    }
+  }, [consignee, userEditedPlace, placeOfDelivery])
 
   const fillDummyData = () => {
     setBlNumber('BL-2025-001')
@@ -122,7 +165,7 @@ export default function BolUploadAndEditOverlay({
     setPortOfLoading('Shanghai')
     setPortOfDischarge('Manila')
     setPlaceOfDelivery('SUBIC')
-    setPairs([
+    setContainerPairs([
       { containerNo: 'MSCU1234567', sealNo: 'S123456' },
       { containerNo: 'MSCU7654321', sealNo: 'S654321' }
     ])
@@ -134,393 +177,476 @@ export default function BolUploadAndEditOverlay({
     setGrossWeight('15000')
   }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    if (!file) {
-      setError('Please select a file first')
-      return
+  const handleSubmit = async (file, formData) => {
+    // Clear previous errors
+    setFieldErrors({})
+    
+    // Required field validation - ALL fields are required
+    const requiredFields = [
+      { key: 'shipper', label: 'Shipper' },
+      { key: 'blNumber', label: 'B/L Number' },
+      { key: 'consignee', label: 'Consignee' },
+      { key: 'shippingLine', label: 'Shipping Line' },
+      { key: 'vesselName', label: 'Vessel Name' },
+      { key: 'voyageNo', label: 'Voyage Number' },
+      { key: 'eta', label: 'ETA' },
+      { key: 'portOfLoading', label: 'Port of Loading' },
+      { key: 'portOfDischarge', label: 'Port of Discharge' },
+      { key: 'placeOfDelivery', label: 'Place of Delivery' },
+      { key: 'containerSpecs', label: 'Container Specs' },
+      { key: 'noOfPackages', label: 'Number of Packages' },
+      { key: 'packagingKind', label: 'Packaging Kind' },
+      { key: 'goodsClassification', label: 'Goods Classification' },
+      { key: 'descriptionOfGoods', label: 'Description of Goods' },
+      { key: 'grossWeight', label: 'Gross Weight' }
+    ]
+    
+    const values = {
+      shipper,
+      blNumber,
+      consignee,
+      shippingLine,
+      vesselName,
+      voyageNo,
+      portOfLoading,
+      portOfDischarge,
+      placeOfDelivery,
+      containerSpecs,
+      noOfPackages,
+      packagingKind,
+      goodsClassification,
+      descriptionOfGoods,
+      grossWeight
     }
     
-    setUploading(true)
-    setUploadError('')
-    try {
-      // 1) Upload file to storage
-      const d = new Date()
-      const HH = String(d.getHours()).padStart(2, '0')
-      const MM = String(d.getMinutes()).padStart(2, '0')
-      const SS = String(d.getSeconds()).padStart(2, '0')
-      const timeTag = `${HH}${MM}${SS}`
-      const safePro = String(proNumber).replace(/[^a-zA-Z0-9._-]/g, '_')
-      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
-      const path = `shipment/${timeTag}-${safePro}-BOL-${safeName}`
-      
-      const { error: upErr } = await supabase.storage
-        .from('documents')
-        .upload(path, file, { upsert: false, contentType: file.type })
-      if (upErr) throw upErr
-
-      // 2) Upsert PRO
-      await upsertPro(proNumber)
-
-      // 3) Insert document row
-      const { data: sess } = await supabase.auth.getSession()
-      const userId = sess?.session?.user?.id
-      const documentId = await insertDocument({
-        proNumber: proNumber,
-        department: 'shipment',
-        documentType: 'bill_of_lading',
-        filePath: path,
-        uploadedBy: userId
-      })
-
-      // 4) Insert document_fields
-      const rows = []
-      const pushText = (key, val) => { 
-        if (val !== undefined && val !== null && String(val).trim() !== '') 
-          rows.push({ canonical_key: key, raw_value: String(val) }) 
-      }
-      const pushNumber = (key, val) => { 
-        const n = Number(val)
-        if (Number.isFinite(n)) 
-          rows.push({ canonical_key: key, value_number: n }) 
-      }
-      
-      pushText('bl_number', blNumber)
-      pushText('shipper', shipper)
-      pushText('consignee', consignee)
-      pushText('shipping_line', shippingLine)
-      pushText('vessel_name', vesselName)
-      pushText('voyage_no', voyageNo)
-      pushText('port_of_loading', portOfLoading)
-      pushText('port_of_discharge', portOfDischarge)
-      pushText('place_of_delivery', placeOfDelivery)
-      
-      // Container/Seal pairs as JSON
-      const cleaned = pairs.map(p => ({ 
-        containerNo: (p.containerNo || '').toString(), 
-        sealNo: (p.sealNo || '').toString() 
-      }))
-      const nonEmpty = cleaned.filter(p => p.containerNo || p.sealNo)
-      if (nonEmpty.length) {
-        rows.push({ canonical_key: 'container_seal_pairs', raw_value: JSON.stringify(nonEmpty) })
-      }
-      
-      pushText('container_specs', containerSpecs)
-      pushNumber('no_of_packages', noOfPackages)
-      pushText('packaging_kind', packagingKind)
-      pushText('goods_classification', goodsClassification)
-      pushText('description_of_goods', descriptionOfGoods)
-      pushNumber('gross_weight', grossWeight)
-
-      if (rows.length) {
-        await insertDocumentFields(documentId, rows)
-      }
-
-      // Success!
-      onSuccess()
-    } catch (err) {
-      console.error('[BOL Upload Error]', err)
-      setUploadError(err?.message || 'Upload failed')
-    } finally {
-      setUploading(false)
+    const errors = {}
+    const missingFields = requiredFields.filter(field => !values[field.key] || values[field.key].toString().trim() === '')
+    
+    // Set field-level errors
+    missingFields.forEach(field => {
+      errors[field.key] = `${field.label} is required`
+    })
+    
+    // Check if container/seal pairs have at least one container number (seal is optional)
+    const hasValidContainer = pairs.some(pair => pair.containerNo.trim() !== '')
+    if (!hasValidContainer) {
+      errors.containerPairs = 'At least one Container number is required (Seal number is optional)'
     }
+    
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors)
+      // Throw an error to prevent DocumentUploadOverlay from closing
+      throw new Error('Validation failed')
+    }
+    
+    // Add pairs data to formData so it gets passed to the parent
+    const enhancedFormData = {
+      ...formData,
+      pairs: pairs
+    }
+    
+    // Clean number fields before submission to database
+    const cleanedFormData = cleanNumberFieldsForDatabase(enhancedFormData, [
+      'no_of_packages',
+      'gross_weight'
+    ])
+    
+    const allValues = {
+      bl_number: blNumber,
+      shipper,
+      consignee,
+      shipping_line: shippingLine,
+      vessel_name: vesselName,
+      voyage_no: voyageNo,
+      eta: eta,
+      port_of_loading: portOfLoading,
+      port_of_discharge: portOfDischarge,
+      place_of_delivery: placeOfDelivery,
+      container_specs: containerSpecs,
+      no_of_packages: noOfPackages,
+      packaging_kind: packagingKind,
+      goods_classification: goodsClassification,
+      description_of_goods: descriptionOfGoods,
+      gross_weight: grossWeight
+    }
+    
+    // Clean number fields in allValues as well
+    const cleanedAllValues = cleanNumberFieldsForDatabase(allValues, [
+      'no_of_packages',
+      'gross_weight'
+    ])
+    
+    onSubmit(file, cleanedFormData)
   }
 
+  // Format the last edited timestamp
+  const lastEditedText = updatedAt ? formatDateTime(updatedAt) : (initialValues.uploaded_at ? formatDateTime(initialValues.uploaded_at) : '')
+  const lastSavedByText = updatedBy || uploadedBy || 'Unknown'
+
   return (
-    <div className="cso-backdrop" onClick={onClose}>
-      <div className="cso-modal" onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
-        <div className="cso-header">
-          <div className="cso-header-left">
-            <h2 className="cso-header-title">{title || 'Upload Bill of Lading'}</h2>
-          </div>
-          <div className="cso-header-right">
-            <button className="cso-close-btn" onClick={onClose} type="button">✕</button>
-          </div>
-        </div>
-
-        <div className="cso-body">
+    <DocumentUploadOverlay
+      title="Upload Bill of Lading"
+      proNumber={proNumber || ''}
+      onClose={onClose}
+      onSubmit={handleSubmit}
+      uploading={false}
+      error=""
+    >
+      <div style={{ backgroundColor: '#fef3c7', padding: '20px', borderRadius: '8px', minHeight: '100%', border: '3px solid #f59e0b' }}>
+        
+        {/* Bill of Lading Information Section */}
+        <div style={{ marginBottom: '1.5rem' }}>
+          <h3 style={{ marginTop: 0, marginBottom: '1rem', fontSize: '1rem', fontWeight: 600, color: '#333' }}>Bill of Lading Information</h3>
           
-          {/* Left side - File upload/preview */}
-          <div className="cso-left" onDragOver={(e) => { e.preventDefault(); e.stopPropagation() }} onDrop={onDrop}>
-            {!previewUrl ? (
-              <div className="cso-drop" role="button" tabIndex={0} onClick={handlePick} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handlePick() }}>
-                <strong>Upload Bill of Lading Document</strong>
-                <div>Drag & drop or click to choose</div>
-                <div className="cso-accept">Accepted: jpg, png, pdf, docx, xlsx</div>
-                <input ref={inputRef} type="file" accept={ACCEPTED_TYPES.join(',')} onChange={(e) => onFiles(e.target.files)} style={{ display: 'none' }} />
-              </div>
-            ) : (
-              <div className="cso-preview">
-                <div className="cso-filename">{file?.name}</div>
-                {canEmbed ? (
-                  ext === 'pdf' ? (
-                    <iframe title={file?.name} src={previewUrl} className="cso-frame" />
-                  ) : (
-                    <img alt={file?.name} src={previewUrl} className="cso-image" />
-                  )
-                ) : (
-                  <div className="cso-fallback">Preview unavailable. Selected: {file?.name}</div>
-                )}
-                <button
-                  type="button"
-                  onClick={() => { setFile(null); setPreviewUrl(''); setError('') }}
-                  style={{
-                    marginTop: '0.5rem',
-                    padding: '0.5rem 1rem',
-                    background: '#fee2e2',
-                    border: '1px solid #fca5a5',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontSize: '0.9rem',
-                    color: '#991b1b'
-                  }}
-                >
-                  Remove File
-                </button>
-              </div>
-            )}
+          {/* ETA Row - At the top */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem', marginBottom: '1rem' }}>
+            <div className="form-group">
+              <label style={getFieldStyles('eta').label}>
+                ETA <span style={{ color: 'red' }}>*</span>
+              </label>
+              <input
+                name="eta"
+                type="text"
+                placeholder="MM/DD/YY"
+                value={eta}
+                onChange={(e) => handleDateInput(e.target.value, setEta)}
+                style={getFieldStyles('eta').input}
+                maxLength={8}
+              />
+              {getFieldStyles('eta').error}
+            </div>
+          </div>
+          
+          {/* First Row - Shipper */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="form-group">
+              <label style={getFieldStyles('shipper').label}>
+                Shipper <span style={{ color: 'red' }}>*</span>
+              </label>
+               <textarea
+                 name="shipper"
+                 value={shipper}
+                 onChange={(e) => setShipper(e.target.value)}
+                 rows={3}
+                 style={getFieldStyles('shipper').input}
+               />
+               {getFieldStyles('shipper').error}
+            </div>
+            <div className="form-group">
+              <label style={getFieldStyles('blNumber').label}>
+                B/L No. <span style={{ color: 'red' }}>*</span>
+              </label>
+               <input
+                 name="blNumber"
+                 type="text"
+                 value={blNumber}
+                 onChange={(e) => setBlNumber(e.target.value)}
+                 style={getFieldStyles('blNumber').input}
+               />
+               {getFieldStyles('blNumber').error}
+            </div>
+          </div>
+          
+          {/* Second Row - Consignee */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="form-group">
+              <label style={getFieldStyles('consignee').label}>
+                Consignee <span style={{ color: 'red' }}>*</span>
+              </label>
+               <textarea
+                 name="consignee"
+                 value={consignee}
+                 onChange={(e) => handleConsigneeChange(e.target.value)}
+                 rows={3}
+                 style={getFieldStyles('consignee').input}
+               />
+               {getFieldStyles('consignee').error}
+            </div>
+            <div className="form-group">
+              <label style={getFieldStyles('shippingLine').label}>
+                Shipping Line <span style={{ color: 'red' }}>*</span>
+              </label>
+               <input
+                 name="shippingLine"
+                 type="text"
+                 value={shippingLine}
+                 onChange={(e) => setShippingLine(e.target.value)}
+                 style={getFieldStyles('shippingLine').input}
+               />
+               {getFieldStyles('shippingLine').error}
+            </div>
           </div>
 
-          {/* Right side - BOL form */}
-          <div className="cso-right">
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'auto' }}>
-              
-              {/* Bill of Lading Information Section */}
-              <div style={{ marginBottom: '1.5rem' }}>
-                <h3 style={{ marginTop: 0, marginBottom: '1rem', fontSize: '1rem', fontWeight: 600, color: '#333' }}>Bill of Lading Information</h3>
-                
-                {/* First Row - Shipper */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                  <div className="form-group">
-                    <label>Shipper</label>
-                     <textarea
-                       value={shipper}
-                       onChange={(e) => setShipper(e.target.value)}
-                       rows={3}
-                     />
-                  </div>
-                  <div className="form-group">
-                    <label>B/L No.</label>
-                     <input
-                       type="text"
-                       value={blNumber}
-                       onChange={(e) => setBlNumber(e.target.value)}
-                     />
-                  </div>
-                </div>
-                
-                {/* Second Row - Consignee */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                  <div className="form-group">
-                    <label>Consignee</label>
-                     <textarea
-                       value={consignee}
-                       onChange={(e) => handleConsigneeChange(e.target.value)}
-                       rows={3}
-                     />
-                  </div>
-                  <div className="form-group">
-                    <label>Shipping Line</label>
-                     <input
-                       type="text"
-                       value={shippingLine}
-                       onChange={(e) => setShippingLine(e.target.value)}
-                     />
-                  </div>
-                </div>
+          {/* Vessel Info Row */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="form-group">
+              <label style={getFieldStyles('vesselName').label}>
+                Vessel Name <span style={{ color: 'red' }}>*</span>
+              </label>
+               <input
+                 name="vesselName"
+                 type="text"
+                 value={vesselName}
+                 onChange={(e) => setVesselName(e.target.value)}
+                 style={getFieldStyles('vesselName').input}
+               />
+               {getFieldStyles('vesselName').error}
+            </div>
+            <div className="form-group">
+              <label style={getFieldStyles('voyageNo').label}>
+                Voyage No. <span style={{ color: 'red' }}>*</span>
+              </label>
+               <input
+                 name="voyageNo"
+                 type="text"
+                 value={voyageNo}
+                 onChange={(e) => setVoyageNo(e.target.value)}
+                 style={getFieldStyles('voyageNo').input}
+               />
+               {getFieldStyles('voyageNo').error}
+            </div>
+          </div>
 
-                {/* Vessel Info Row */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                  <div className="form-group">
-                    <label>Vessel Name</label>
-                     <input
-                       type="text"
-                       value={vesselName}
-                       onChange={(e) => setVesselName(e.target.value)}
-                     />
-                  </div>
-                  <div className="form-group">
-                    <label>Voyage No.</label>
-                     <input
-                       type="text"
-                       value={voyageNo}
-                       onChange={(e) => setVoyageNo(e.target.value)}
-                     />
-                  </div>
-                </div>
-
-                {/* Ports Row */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
-                  <div className="form-group">
-                    <label>Port of Loading</label>
-                     <input
-                       type="text"
-                       value={portOfLoading}
-                       onChange={(e) => setPortOfLoading(e.target.value)}
-                     />
-                  </div>
-                  <div className="form-group">
-                    <label>Port of Discharge</label>
-                     <input
-                       type="text"
-                       value={portOfDischarge}
-                       onChange={(e) => setPortOfDischarge(e.target.value)}
-                     />
-                  </div>
-                  <div className="form-group">
-                    <label>Place of Delivery</label>
-                     <input
-                       type="text"
-                       value={placeOfDelivery}
-                       onChange={(e) => handlePlaceChange(e.target.value)}
-                     />
-                  </div>
-                </div>
-              </div>
-
-              {/* Cargo Table Section - Combined Line Items & Cargo Details */}
-              <div style={{ marginBottom: '1rem' }}>
-                <h3 style={{ marginTop: 0, marginBottom: '1rem', fontSize: '1rem', fontWeight: 600, color: '#333', borderTop: '2px solid #ddd', paddingTop: '1rem' }}>Cargo Table</h3>
-                
-                 {/* Container/Seal Pairs Table */}
-                 <div style={{ overflowX: 'auto' }}>
-                   <table className="cargo-table">
-                     <thead>
-                       <tr>
-                         <th>Container No.</th>
-                         <th>Seal No.</th>
-                         <th></th>
-                       </tr>
-                     </thead>
-                     <tbody>
-                       {pairs.map((pair, idx) => (
-                         <tr key={idx}>
-                           <td>
-                             <input
-                               type="text"
-                               value={pair.containerNo}
-                               onChange={(e) => changePair(idx, 'containerNo', e.target.value)}
-                             />
-                           </td>
-                           <td>
-                             <input
-                               type="text"
-                               value={pair.sealNo}
-                               onChange={(e) => changePair(idx, 'sealNo', e.target.value)}
-                             />
-                          </td>
-                           <td>
-                             <button
-                               type="button"
-                               className="delete-pair-btn"
-                               onClick={() => removePair(idx)}
-                               disabled={pairs.length <= 1}
-                             >
-                               <i className="fi fi-rs-trash"></i>
-                             </button>
-                           </td>
-                        </tr>
-                       ))}
-                     </tbody>
-                   </table>
-                 </div>
-
-                 <button type="button" onClick={addPair} className="add-pair-btn">
-                   + Add Container/Seal Pair
-                 </button>
-
-                {/* Container Specs */}
-                <div className="form-group" style={{ marginTop: '1rem' }}>
-                  <label>Container Specs</label>
-                   <input
-                     type="text"
-                     value={containerSpecs}
-                     onChange={(e) => setContainerSpecs(e.target.value)}
-                   />
-                </div>
-
-                {/* Packages Row */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                  <div className="form-group">
-                    <label>No. of Packages</label>
-                     <input
-                       type="number"
-                       value={noOfPackages}
-                       onChange={(e) => setNoOfPackages(e.target.value)}
-                     />
-                  </div>
-                  <div className="form-group">
-                    <label>Packaging Kind</label>
-                     <input
-                       type="text"
-                       value={packagingKind}
-                       onChange={(e) => setPackagingKind(e.target.value)}
-                     />
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label>Goods Classification</label>
-                   <input
-                     type="text"
-                     value={goodsClassification}
-                     onChange={(e) => setGoodsClassification(e.target.value)}
-                   />
-                </div>
-
-                <div className="form-group">
-                  <label>Description of Goods</label>
-                   <textarea
-                     value={descriptionOfGoods}
-                     onChange={(e) => setDescriptionOfGoods(e.target.value)}
-                     rows={4}
-                   />
-                </div>
-
-                <div className="form-group">
-                  <label>Gross Weight (KGS)</label>
-                   <input
-                     type="number"
-                     step="0.01"
-                     value={grossWeight}
-                     onChange={(e) => setGrossWeight(e.target.value)}
-                   />
-                </div>
-              </div>
-
-              {/* Debug - Dummy Data Button */}
-              {error && <div className="cso-error">{error}</div>}
-              {uploadError && <div className="cso-error">{uploadError}</div>}
-              <div style={{ marginTop: 'auto', paddingTop: '1rem' }}>
-                <button 
-                  className="cso-btn" 
-                  type="button" 
-                  onClick={fillDummyData}
-                  style={{ background: '#fef3c7', borderColor: '#fbbf24', width: '100%' }}
-                  disabled={uploading}
-                >
-                  Fill Dummy Data
-                </button>
-              </div>
-            </form>
+          {/* Ports Row */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+            <div className="form-group">
+              <label style={getFieldStyles('portOfLoading').label}>
+                Port of Loading <span style={{ color: 'red' }}>*</span>
+              </label>
+               <input
+                 name="portOfLoading"
+                 type="text"
+                 value={portOfLoading}
+                 onChange={(e) => setPortOfLoading(e.target.value)}
+                 style={getFieldStyles('portOfLoading').input}
+               />
+               {getFieldStyles('portOfLoading').error}
+            </div>
+            <div className="form-group">
+              <label style={getFieldStyles('portOfDischarge').label}>
+                Port of Discharge <span style={{ color: 'red' }}>*</span>
+              </label>
+               <input
+                 name="portOfDischarge"
+                 type="text"
+                 value={portOfDischarge}
+                 onChange={(e) => setPortOfDischarge(e.target.value)}
+                 style={getFieldStyles('portOfDischarge').input}
+               />
+               {getFieldStyles('portOfDischarge').error}
+            </div>
+            <div className="form-group">
+              <label style={getFieldStyles('placeOfDelivery').label}>
+                Place of Delivery <span style={{ color: 'red' }}>*</span>
+              </label>
+               <input
+                 name="placeOfDelivery"
+                 type="text"
+                 value={placeOfDelivery}
+                 onChange={(e) => handlePlaceChange(e.target.value)}
+                 style={getFieldStyles('placeOfDelivery').input}
+               />
+               {getFieldStyles('placeOfDelivery').error}
+            </div>
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="cso-footer">
-          <div className="cso-footer-left">
-            {/* New document - no saved by info yet */}
+        {/* Cargo Table Section */}
+        <div style={{ marginBottom: '1rem' }}>
+          <h3 style={{ marginTop: 0, marginBottom: '1rem', fontSize: '1rem', fontWeight: 600, color: '#333', borderTop: '2px solid #ddd', paddingTop: '1rem' }}>Cargo Table</h3>
+          
+           {/* Container/Seal Pairs Table */}
+           <div style={{ overflowX: 'auto' }}>
+             <table className="cargo-table">
+               <thead>
+                 <tr>
+                   <th style={{ paddingRight: '5px' }}>Container No. <span style={{ color: 'red' }}>*</span></th>
+                   <th style={{ paddingRight: '5px' }}>Seal No. <span style={{ color: '#666', fontSize: '0.8em' }}>(optional)</span></th>
+                   <th style={{ visibility: 'hidden' }}>Actions</th>
+                 </tr>
+               </thead>
+               <tbody>
+                 {pairs.map((pair, idx) => (
+                   <tr key={idx}>
+                     <td>
+                       <input
+                         type="text"
+                         value={pair.containerNo}
+                         onChange={(e) => changePair(idx, 'containerNo', e.target.value)}
+                         style={{
+                           borderColor: (fieldErrors.containerPairs && pair.containerNo.trim() === '') ? '#dc2626' : '#d1d5db',
+                           borderWidth: (fieldErrors.containerPairs && pair.containerNo.trim() === '') ? '2px' : '1px'
+                         }}
+                       />
+                     </td>
+                     <td>
+                       <input
+                         type="text"
+                         value={pair.sealNo}
+                         onChange={(e) => changePair(idx, 'sealNo', e.target.value)}
+                         style={{
+                           borderColor: '#d1d5db',
+                           borderWidth: '1px'
+                         }}
+                       />
+                    </td>
+                     <td style={{ textAlign: 'center', verticalAlign: 'middle' }}>
+                       <button
+                         type="button"
+                         className="delete-pair-btn"
+                         onClick={() => removePair(idx)}
+                         disabled={pairs.length <= 1}
+                         style={{
+                           height: '3rem',
+                           width: '3rem',
+                           padding: '0',
+                           fontSize: '1rem',
+                           display: 'flex',
+                           alignItems: 'center',
+                           justifyContent: 'center'
+                         }}
+                       >
+                         <i className="fi fi-rs-trash"></i>
+                       </button>
+                     </td>
+                  </tr>
+                 ))}
+               </tbody>
+             </table>
+           </div>
+
+           {fieldErrors.containerPairs && (
+             <div style={{ color: '#dc2626', fontSize: '0.875rem', marginTop: '0.25rem' }}>
+               {fieldErrors.containerPairs}
+             </div>
+           )}
+
+           <button 
+             type="button" 
+             onClick={addPair} 
+             className="add-pair-btn"
+             style={{
+               backgroundColor: '#1976d2',
+               color: 'white',
+               border: 'none',
+               borderRadius: '4px',
+               padding: '8px 16px',
+               cursor: 'pointer',
+               fontSize: '14px',
+               fontWeight: '500'
+             }}
+           >
+             + Add Container No / Seal No Row
+           </button>
+
+          {/* Container Specs */}
+          <div className="form-group" style={{ marginTop: '1rem' }}>
+            <label style={getFieldStyles('containerSpecs').label}>
+              Container Specs <span style={{ color: 'red' }}>*</span>
+            </label>
+             <input
+               name="containerSpecs"
+               type="text"
+               value={containerSpecs}
+               onChange={(e) => setContainerSpecs(e.target.value)}
+               style={getFieldStyles('containerSpecs').input}
+             />
+             {getFieldStyles('containerSpecs').error}
           </div>
-          <div className="cso-footer-right">
-            <button className="cso-btn" type="button" onClick={onClose} disabled={uploading}>Cancel</button>
-            <button className="cso-btn cso-primary" type="button" onClick={handleSubmit} disabled={uploading}>
-              {uploading ? 'Uploading...' : 'Submit'}
-            </button>
+
+          {/* Packages Row */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="form-group">
+              <label style={getFieldStyles('noOfPackages').label}>
+                No. of Packages <span style={{ color: 'red' }}>*</span>
+              </label>
+               <input
+                 name="noOfPackages"
+                 type="text"
+                 value={noOfPackages}
+                 onChange={(e) => handleWholeNumberInputWithCaret(e, setNoOfPackages)}
+                 style={{
+                   ...numberInputProps.style,
+                   ...getFieldStyles('noOfPackages').input
+                 }}
+                 onWheel={numberInputProps.onWheel}
+               />
+               {getFieldStyles('noOfPackages').error}
+            </div>
+            <div className="form-group">
+              <label style={getFieldStyles('packagingKind').label}>
+                Packaging Kind <span style={{ color: 'red' }}>*</span>
+              </label>
+               <input
+                 name="packagingKind"
+                 type="text"
+                 value={packagingKind}
+                 onChange={(e) => setPackagingKind(e.target.value)}
+                 style={getFieldStyles('packagingKind').input}
+               />
+               {getFieldStyles('packagingKind').error}
+            </div>
           </div>
+
+          <div className="form-group">
+            <label style={getFieldStyles('goodsClassification').label}>
+              Goods Classification <span style={{ color: 'red' }}>*</span>
+            </label>
+             <input
+               name="goodsClassification"
+               type="text"
+               value={goodsClassification}
+               onChange={(e) => setGoodsClassification(e.target.value)}
+               style={getFieldStyles('goodsClassification').input}
+             />
+             {getFieldStyles('goodsClassification').error}
+          </div>
+
+          <div className="form-group">
+            <label style={getFieldStyles('descriptionOfGoods').label}>
+              Description of Goods <span style={{ color: 'red' }}>*</span>
+            </label>
+             <textarea
+               name="descriptionOfGoods"
+               value={descriptionOfGoods}
+               onChange={(e) => setDescriptionOfGoods(e.target.value)}
+               rows={4}
+               style={getFieldStyles('descriptionOfGoods').input}
+             />
+             {getFieldStyles('descriptionOfGoods').error}
+          </div>
+
+          <div className="form-group">
+            <label style={getFieldStyles('grossWeight').label}>
+              Gross Weight (KGS) <span style={{ color: 'red' }}>*</span>
+            </label>
+             <input
+               name="grossWeight"
+               type="text"
+               value={grossWeight}
+               onChange={(e) => handleDecimalNumberInputWithCaret(e, setGrossWeight)}
+               style={{
+                 ...numberInputProps.style,
+                 ...getFieldStyles('grossWeight').input
+               }}
+               onWheel={numberInputProps.onWheel}
+             />
+             {getFieldStyles('grossWeight').error}
+          </div>
+        </div>
+
+        {/* Debug - Dummy Data Button */}
+        <div style={{ marginTop: 'auto', paddingTop: '1rem' }}>
+          <button 
+            className="cso-btn" 
+            type="button" 
+            onClick={fillDummyData}
+            style={{ background: '#fef3c7', borderColor: '#fbbf24', width: '100%' }}
+          >
+            Fill Dummy Data
+          </button>
         </div>
       </div>
-    </div>
+    </DocumentUploadOverlay>
   )
 }
-

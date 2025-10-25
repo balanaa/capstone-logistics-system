@@ -1,0 +1,29 @@
+{
+    "providers": {
+      "cursor_default": { "type": "local_default" },
+      "openrouter_qwen": {
+        "type": "openai_compatible",
+        "api_key_env": "OPENROUTER_API_KEY",
+        "base_url": "https://api.openrouter.ai",
+        "model": "qwen/qwen3-coder",
+        "max_context": 262144
+      }
+    },
+    "routing": [
+      {
+        "name": "heavy_repo_analysis",
+        "match": { "tag": "BIG" },
+        "provider": "openrouter_qwen",
+        "timeout_seconds": 1800,
+        "zip_and_upload": true,
+        "exclude_patterns": [".git", "node_modules", ".env", "google-service-account.json"]
+      },
+      {
+        "name": "default_interactive",
+        "match": { "default": true },
+        "provider": "cursor_default"
+      }
+    ],
+    "zip_settings": { "max_size_mb": 500, "exclude_patterns": ["node_modules", ".git"] }
+  }
+  

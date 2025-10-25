@@ -1,8 +1,13 @@
 .chart-container {
   width: 100%;
+  height: 100%; /* Take full height of parent */
   border-radius: var(--window-border-radius);
   background-color: var(--lighter-color);
   border-radius: 14px;
+  display: flex;
+  flex-direction: column; /* Ensure proper flex layout */
+  container-type: inline-size; /* Enable container queries */
+  container-name: chart-container;
 }
 
 .window-header{
@@ -13,13 +18,15 @@
     font-weight: 600;
   }
 
-  .window-body {
-    padding: 1rem 2rem 2rem 2rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: min(50px, 10vw);
-  }
+.window-body {
+  padding: 1rem 2rem 2rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: min(50px, 10vw);
+  flex: 1; /* Take remaining space in flex container */
+  min-height: 0; /* Allow flex shrinking */
+}
   
 
 .pie-chart {
@@ -36,15 +43,62 @@
   align-items: center;
 }
 
+/* Three-status pie chart for shipment status */
+.pie-chart.status-pie-chart {
+  background: conic-gradient(
+    #f59e0b 0% var(--ongoing),
+    #3b82f6 var(--ongoing) calc(var(--ongoing) + var(--filed-boc)),
+    #10b981 calc(var(--ongoing) + var(--filed-boc)) var(--total)
+  );
+}
+
+/* Three-status pie chart for trucking status */
+.pie-chart.trucking-pie-chart {
+  background: conic-gradient(
+    #8b5cf6 0% var(--booking),
+    #f59e0b var(--booking) calc(var(--booking) + var(--delivering)),
+    #10b981 calc(var(--booking) + var(--delivering)) var(--total)
+  );
+}
+
+/* Two-status pie chart for trucking completion */
+.pie-chart.trucking-completion-pie-chart {
+  background: conic-gradient(
+    #f59e0b 0% var(--ongoing),
+    #10b981 var(--ongoing) var(--total)
+  );
+}
+
+/* Two-status pie chart for finance completion */
+.pie-chart.finance-completion-pie-chart {
+  background: conic-gradient(
+    #dc2626 0% var(--unpaid),
+    #16a34a var(--unpaid) var(--total)
+  );
+}
+
+/* Two-status pie chart for verify status */
+.pie-chart.verify-pie-chart {
+  background: conic-gradient(
+    #f59e0b 0% var(--pending),
+    #10b981 var(--pending) var(--total)
+  );
+}
+
 .pie-chart-outline {
   display: flex; 
   justify-content: center;      
   align-items: center;
   border-radius: 50%;
   box-shadow: 4px 8px 4px rgba(0, 0, 0, 0.3);
+  background-color: var(--background-color);
   width: 300px;
   height: 300px;
-  background-color: var(--background-color);
+}
+
+.pie-chart {
+  width: 280px;
+  height: 280px;
 }
 
 .pie-chart::before {
@@ -80,35 +134,187 @@
 .chart-stats { 
   display: flex; 
   flex-direction: column; 
+  min-width: 200px;
 }
 
 .stat-row { 
   display: flex; 
-  gap: 12px; 
+  justify-content: space-between;
   align-items: center; 
-  margin-bottom: 12px; 
+  margin-bottom: 8px; 
+  padding: 4px 0;
 }
 
 .stat-label { 
-  font-weight: 700; 
+  font-weight: 600;
+  font-size: 0.95rem;
+  flex: 1;
+}
+
+.stat-value {
+  font-weight: 700;
+  font-size: 1rem;
+  text-align: right;
+  min-width: 30px;
+}
+
+/* Status label colors - matching pie chart segments */
+.stat-label.ongoing { 
+  color: #f59e0b; 
+}
+
+.stat-label.filed-boc { 
+  color: #3b82f6; 
 }
 
 .stat-label.completed { 
-  color: #1AAFB5; 
+  color: #10b981; 
 }
 
-.stat-label.ongoing { 
-  color: #0F839D; 
+/* Status value colors - matching labels */
+.stat-value.ongoing { 
+  color: #f59e0b; 
+}
+
+.stat-value.filed-boc { 
+  color: #3b82f6; 
+}
+
+.stat-value.completed { 
+  color: #10b981; 
+}
+
+/* Trucking status label colors */
+.stat-label.booking { 
+  color: #8b5cf6; 
+}
+
+.stat-label.delivering { 
+  color: #f59e0b; 
+}
+
+.stat-label.returned { 
+  color: #10b981; 
+}
+
+/* Trucking status value colors */
+.stat-value.booking { 
+  color: #8b5cf6; 
+}
+
+.stat-value.delivering { 
+  color: #f59e0b; 
+}
+
+.stat-value.returned { 
+  color: #10b981; 
+}
+
+/* Finance status label colors */
+.stat-label.unpaid { 
+  color: #dc2626; 
+}
+
+.stat-label.paid { 
+  color: #16a34a; 
+}
+
+/* Finance status value colors */
+.stat-value.unpaid { 
+  color: #dc2626; 
+}
+
+.stat-value.paid { 
+  color: #16a34a; 
+}
+
+/* Total row styling */
+.stat-row.total { 
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 2px solid #000;
 }
 
 .stat-row.total .stat-label, 
 .stat-row.total .stat-value { 
   font-weight: 800; 
+  color: #374151;
+  font-size: 1.05rem;
 }
 
-.stats-separator { 
-  border-top: 2px solid #333; 
-  margin: 18px 0 10px; 
-  width: 220px; 
+/* Container-based responsive sizing and stats visibility */
+/* When container is wide enough: show stats and use normal sizing */
+@container chart-container (min-width: 600px) {
+  .chart-stats {
+    display: flex;
+  }
+  
+  .pie-chart-outline {
+    width: 300px;
+    height: 300px;
+  }
+  
+  .pie-chart {
+    width: 280px;
+    height: 280px;
+  }
+  
+  .pie-chart::before {
+    width: 200px;
+    height: 200px;
+  }
 }
+
+/* When container is medium: hide stats, keep normal chart size */
+@container chart-container (min-width: 400px) and (max-width: 599px) {
+  .chart-stats {
+    display: none;
+  }
+  
+  .window-body {
+    justify-content: center;
+  }
+  
+  .pie-chart-outline {
+    width: 250px;
+    height: 250px;
+  }
+  
+  .pie-chart {
+    width: 230px;
+    height: 230px;
+  }
+  
+  .pie-chart::before {
+    width: 170px;
+    height: 170px;
+  }
+}
+
+/* When container is small: hide stats, smaller chart */
+@container chart-container (max-width: 399px) {
+  .chart-stats {
+    display: none;
+  }
+  
+  .window-body {
+    justify-content: center;
+  }
+  
+  .pie-chart-outline {
+    width: 200px;
+    height: 200px;
+  }
+  
+  .pie-chart {
+    width: 180px;
+    height: 180px;
+  }
+  
+  .pie-chart::before {
+    width: 140px;
+    height: 140px;
+  }
+}
+
 

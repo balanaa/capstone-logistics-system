@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React, { useContext, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ShipmentPieChart from "../../components/PieCharts/ShipmentPieChart";
 import DepartmentMain from '../../components/departments/DepartmentMain'
@@ -6,46 +6,63 @@ import CreateShipmentOverlay from '../../components/overlays/CreateShipmentOverl
 import { ProDocumentListContext } from '../../App'
 import DocumentEditOverlay from '../../components/overlays/DocumentEditOverlay'
 import { supabase } from '../../services/supabase/client'
-import { upsertPro, insertDocument, insertDocumentFields } from '../../services/supabase/documents'
+import { upsertPro, insertDocument, insertDocumentFields, fetchShipmentTableData } from '../../services/supabase/documents'
 
 const Shipment = () => {
     const navigate = useNavigate();
     const { proDocumentList } = useContext(ProDocumentListContext)
-    const bolDefaultFields = [
-        { label: 'Type of B/L', info: '' },
-        { label: 'Shipper', info: '' },
-        { label: 'Consignee', info: '' },
-        { label: 'B/L No.', info: '' },
-        { label: 'Forwarder', info: '' },
-        { label: 'Container No.', info: '' },
-        { label: 'Size and Type of Container', info: '' },
-        { label: 'Quantity', info: '' },
-        { label: 'Gross Weight', info: '' },
-        { label: 'Port of Loading', info: '' },
-        { label: 'Port of Discharge', info: '' },
-        { label: 'ETA', info: '' }
-    ]
-    // Build rows for DepartmentMain from context
-    const rows = (proDocumentList || []).map(item => ({
-        id: item.proNo,
-        proNo: item.proNo,
-        blNo: item.documents.find(d => d.type === 'Bill of Lading')?.data.find(f => f.label === 'B/L No.')?.info || '-',
-        containerNo: item.documents.find(d => d.type === 'Bill of Lading')?.data.find(f => f.label === 'Container No.')?.info || '-',
-        eta: item.documents.find(d => d.type === 'Bill of Lading')?.data.find(f => f.label === 'ETA')?.info || '-',
-        pod: item.documents.find(d => d.type === 'Bill of Lading')?.data.find(f => f.label === 'Port of Discharge')?.info || '-',
-        documentsRecorded: item.documents?.length ?? 0,
-        filedOn: '2025-10-01',
-        status: 'Ongoing'
-    }))
+    
+    // State for table data
+    const [tableData, setTableData] = useState([])
+    const [loading, setLoading] = useState(true)
+    const [tableError, setTableError] = useState(null)
+
+    // Fetch table data from database
+    useEffect(() => {
+        const loadTableData = async () => {
+            try {
+                setLoading(true)
+                const data = await fetchShipmentTableData()
+                setTableData(data)
+                setTableError(null)
+            } catch (err) {
+                console.error('Error loading shipment data:', err)
+                setTableError('Failed to load shipment data')
+                // Fallback to context data if available
+                if (proDocumentList && proDocumentList.length > 0) {
+                    const fallbackData = proDocumentList.map(item => ({
+                        id: item.proNo,
+                        proNo: item.proNo,
+                        blNo: item.documents?.find(d => d.type === 'Bill of Lading')?.data?.find(f => f.label === 'B/L No.')?.info || '-',
+                        consignee: '-',
+                        shippingLine: '-',
+                        eta: item.documents?.find(d => d.type === 'Bill of Lading')?.data?.find(f => f.label === 'ETA')?.info || '-',
+                        placeOfDelivery: item.documents?.find(d => d.type === 'Bill of Lading')?.data?.find(f => f.label === 'Port of Discharge')?.info || '-',
+                        containerNo: item.documents?.find(d => d.type === 'Bill of Lading')?.data?.find(f => f.label === 'Container No.')?.info || '-',
+                        documentsRecorded: item.documents?.length ? `${item.documents.length} documents` : '-',
+                        createdOn: '2025-10-01',
+                        status: 'Ongoing'
+                    }))
+                    setTableData(fallbackData)
+                }
+            } finally {
+                setLoading(false)
+            }
+        }
+        
+        loadTableData()
+    }, [proDocumentList])
 
     const columns = [
         { key: 'proNo', label: 'PRO No.' },
         { key: 'blNo', label: 'B/L No.' },
-        { key: 'containerNo', label: 'Container No.' },
+        { key: 'consignee', label: 'Consignee' },
+        { key: 'shippingLine', label: 'Shipping Line' },
         { key: 'eta', label: 'ETA' },
-        { key: 'pod', label: 'Port Of Discharge' },
+        { key: 'placeOfDelivery', label: 'Place of Delivery' },
+        { key: 'containerNo', label: 'Container No.' },
         { key: 'documentsRecorded', label: 'Documents Recorded' },
-        { key: 'filedOn', label: 'Filed On' },
+        { key: 'createdOn', label: 'Created On' },
         { key: 'status', label: 'Status' }
     ]
 
@@ -66,6 +83,7 @@ const Shipment = () => {
     }
 
     const handleConfirmOverlay = ({ proNumber, file, previewUrl, originalFileName }) => {
+        console.log('Shipment handleConfirmOverlay called:', { proNumber, file, previewUrl, originalFileName })
         setPendingBOL({ proNumber, file, previewUrl, originalFileName })
         setOverlayOpen(false)
         setOpenStep2(true)
@@ -167,9 +185,10 @@ const Shipment = () => {
                 PieChartComponent={ShipmentPieChart}
                 reminders={reminders}
                 columns={columns}
-                rows={rows}
+                rows={tableData}
                 onAdd={handleAddDocument}
                 routePrefix="/shipment"
+                loading={loading}
             />
             <CreateShipmentOverlay
                 open={overlayOpen}

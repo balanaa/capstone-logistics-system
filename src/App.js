@@ -9,6 +9,7 @@ import {
   useNavigate
 } from 'react-router-dom';
 import './App.css';
+import './mobile.css';
 import Dashboard from './pages/Dashboard';
 import Shipment from './pages/Shipment/Shipment';
 import ShipmentProfile from './pages/Shipment/ShipmentProfile';
@@ -17,12 +18,15 @@ import TruckingProfile from './pages/Trucking/TruckingProfile';
 import Finance from './pages/Finance/Finance';
 import FinanceProfile from './pages/Finance/FinanceProfile';
 import Analytics from './pages/Analytics';
-import VerifierDashboard from './pages/Verifier/VerifierDashboard';
+import Verifier from './pages/Verifier/Verifier';
 import StorageTest from './pages/StorageTest';
+import Log from './pages/Log';
 import UserManagement from './pages/Auth/UserManagement';
+import Camera from './pages/Camera/Camera';
 import React from 'react';
 import { proDocumentList as initialProDocumentList } from './data';
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { MobileProvider } from './context/MobileContext'
 import ProtectedRoute from './components/common/ProtectedRoute'
 import ErrorBoundary from './components/common/ErrorBoundary'
 import Loading from './components/common/Loading'
@@ -42,15 +46,17 @@ function App() {
   return (
     <ProfileContext.Provider value={{ profile, setProfile }}>
       <ProDocumentListContext.Provider value={{ proDocumentList, setProDocumentList }}>
-        <Router>
-          <AuthProvider>
-            <ErrorBoundary>
-              <Shell>
-                <MainContent />
-              </Shell>
-            </ErrorBoundary>
-          </AuthProvider>
-        </Router>
+        <MobileProvider>
+          <Router>
+            <AuthProvider>
+              <ErrorBoundary>
+                <Shell>
+                  <MainContent />
+                </Shell>
+              </ErrorBoundary>
+            </AuthProvider>
+          </Router>
+        </MobileProvider>
       </ProDocumentListContext.Provider>
     </ProfileContext.Provider>
   );
@@ -63,6 +69,9 @@ function MainContent() {
       <Route path="/login" element={<Login />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/403" element={<Forbidden403 />} />
+      
+      {/* Camera route - public access for testing */}
+      <Route path="/camera" element={<Camera />} />
       
       <Route path="/dashboard" element={
         <ProtectedRoute allowedRoles={['admin','viewer']}>
@@ -115,7 +124,7 @@ function MainContent() {
       {/* Verifier routes */}
       <Route path="/verifier" element={
         <ProtectedRoute allowedRoles={['verifier','admin','viewer']}>
-          <VerifierDashboard />
+          <Verifier />
         </ProtectedRoute>
       } />
       
@@ -130,6 +139,13 @@ function MainContent() {
       <Route path="/storage-test" element={
         <ProtectedRoute allowedRoles={['shipment','trucking','finance','verifier','admin','viewer']}>
           <StorageTest />
+        </ProtectedRoute>
+      } />
+
+      {/* Actions Log route */}
+      <Route path="/log" element={
+        <ProtectedRoute allowedRoles={['admin','viewer']}>
+          <Log />
         </ProtectedRoute>
       } />
     </Routes>
