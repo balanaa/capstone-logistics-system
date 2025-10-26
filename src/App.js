@@ -3,8 +3,6 @@ import {
   BrowserRouter as Router,
   Routes,
   Route,
-  Link,
-  Navigate,
   useLocation,
   useNavigate
 } from 'react-router-dom';
@@ -23,6 +21,7 @@ import StorageTest from './pages/StorageTest';
 import Log from './pages/Log';
 import UserManagement from './pages/Auth/UserManagement';
 import Camera from './pages/Camera/Camera';
+import OCRTest from './pages/OCRTest';
 import React from 'react';
 import { proDocumentList as initialProDocumentList } from './data';
 import { AuthProvider, useAuth } from './context/AuthContext'
@@ -65,7 +64,7 @@ function AppContent() {
   console.log('AppContent - Current pathname:', location.pathname);
   
   // For public routes, don't use AuthProvider
-  if (location.pathname === '/' || location.pathname === '/login' || location.pathname === '/camera' || location.pathname === '/reset-password') {
+  if (location.pathname === '/' || location.pathname === '/login' || location.pathname === '/camera' || location.pathname === '/reset-password' || location.pathname === '/ocr') {
     console.log('AppContent - Using public routes for:', location.pathname);
     return (
       <Routes>
@@ -73,6 +72,7 @@ function AppContent() {
         <Route path="/login" element={<Login />} />
         <Route path="/camera" element={<Camera />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/ocr" element={<OCRTest />} />
       </Routes>
     );
   }
@@ -170,7 +170,6 @@ function MainContent() {
 }
 
 function Shell({ children }) {
-  const location = useLocation();
   const { user, loading, authReady } = useAuth();
   const isStandalone = false; // No standalone routes in Shell since all public routes are handled separately
   const navigate = useNavigate();
