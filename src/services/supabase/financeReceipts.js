@@ -27,16 +27,27 @@ export async function createReceipt(proNumber, receiptType, receiptData) {
     const userId = user?.id;
     
     if (userId) {
-      // Get user details for logging
+      // Get user details for logging from profiles table
       let userName = 'Unknown User';
       try {
-        const { data: session } = await supabase.auth.getSession();
-        if (session?.session?.user) {
-          const sessionUser = session.session.user;
-          userName = sessionUser.user_metadata?.full_name || sessionUser.email || `User ${sessionUser.id.substring(0, 8)}`;
+        console.log(`[createReceipt] Fetching user name from profiles table for user: ${userId}`)
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', userId)
+          .single()
+        
+        if (!profileError && profile?.full_name) {
+          userName = profile.full_name
+          console.log(`[createReceipt] Found user name in profiles: ${userName}`)
+        } else {
+          console.warn(`[createReceipt] Could not fetch user name from profiles:`, profileError)
+          // Fallback to user ID if profile not found
+          userName = `User ${userId.substring(0, 8)}`
         }
       } catch (err) {
-        console.warn('Could not get user details:', err);
+        console.warn('Could not get user details from profiles:', err)
+        userName = `User ${userId.substring(0, 8)}`
       }
 
       const receiptTypeDisplay = receiptType === 'statement_of_accounts' ? 'Statement of Account' : 'Service Invoice';
@@ -100,16 +111,27 @@ export async function updateReceipt(receiptId, receiptData) {
     const userId = user?.id;
     
     if (userId) {
-      // Get user details for logging
+      // Get user details for logging from profiles table
       let userName = 'Unknown User';
       try {
-        const { data: session } = await supabase.auth.getSession();
-        if (session?.session?.user) {
-          const sessionUser = session.session.user;
-          userName = sessionUser.user_metadata?.full_name || sessionUser.email || `User ${sessionUser.id.substring(0, 8)}`;
+        console.log(`[updateReceipt] Fetching user name from profiles table for user: ${userId}`)
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', userId)
+          .single()
+        
+        if (!profileError && profile?.full_name) {
+          userName = profile.full_name
+          console.log(`[updateReceipt] Found user name in profiles: ${userName}`)
+        } else {
+          console.warn(`[updateReceipt] Could not fetch user name from profiles:`, profileError)
+          // Fallback to user ID if profile not found
+          userName = `User ${userId.substring(0, 8)}`
         }
       } catch (err) {
-        console.warn('Could not get user details:', err);
+        console.warn('Could not get user details from profiles:', err)
+        userName = `User ${userId.substring(0, 8)}`
       }
 
       // Get receipt details for better logging
@@ -303,17 +325,28 @@ export async function deleteReceipt(receiptId) {
     const userId = user?.id;
     
     if (userId) {
-      // Get user details for logging
-      let userName = 'Unknown User';
-      try {
-        const { data: session } = await supabase.auth.getSession();
-        if (session?.session?.user) {
-          const sessionUser = session.session.user;
-          userName = sessionUser.user_metadata?.full_name || sessionUser.email || `User ${sessionUser.id.substring(0, 8)}`;
-        }
-      } catch (err) {
-        console.warn('Could not get user details:', err);
-      }
+       // Get user details for logging from profiles table
+       let userName = 'Unknown User';
+       try {
+         console.log(`[deleteReceipt] Fetching user name from profiles table for user: ${userId}`)
+         const { data: profile, error: profileError } = await supabase
+           .from('profiles')
+           .select('full_name')
+           .eq('id', userId)
+           .single()
+         
+         if (!profileError && profile?.full_name) {
+           userName = profile.full_name
+           console.log(`[deleteReceipt] Found user name in profiles: ${userName}`)
+         } else {
+           console.warn(`[deleteReceipt] Could not fetch user name from profiles:`, profileError)
+           // Fallback to user ID if profile not found
+           userName = `User ${userId.substring(0, 8)}`
+         }
+       } catch (err) {
+         console.warn('Could not get user details from profiles:', err)
+         userName = `User ${userId.substring(0, 8)}`
+       }
 
       const receiptTypeDisplay = receiptDetails?.receipt_type === 'statement_of_accounts' ? 'Statement of Account' : 'Service Invoice';
       const proNumber = receiptDetails?.pro_number || 'Unknown';

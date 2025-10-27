@@ -4,11 +4,13 @@
   "private": true,
   "dependencies": {
     "@google-cloud/documentai": "^9.4.0",
+    "@google-cloud/vision": "^5.3.4",
     "@supabase/supabase-js": "^2.76.1",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^13.5.0",
+    "pdfjs-dist": "^5.4.296",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.26.2",

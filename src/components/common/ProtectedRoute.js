@@ -33,11 +33,11 @@ export default function ProtectedRoute({ allowedRoles = [], children }) {
   
 
   if (!authReady || loading) return <Loading />
-  if (!user) return <Navigate to="/403" replace state={{ from: location }} />
+  if (!user) return <Navigate to="/login" replace state={{ from: location }} />
   if (safeRoles.length === 0 && !roleWaitElapsed) return <Loading />
   if (allowedRoles.length > 0) {
     const has = safeRoles.some(r => allowedRoles.includes(r)) || safeRoles.includes('admin')
-    if (!has) return <Navigate to="/403" replace />
+    if (!has) return <Navigate to="/login" replace />
   }
 
   return children

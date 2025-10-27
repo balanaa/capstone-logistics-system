@@ -3,8 +3,6 @@ import {
   BrowserRouter as Router,
   Routes,
   Route,
-  Link,
-  Navigate,
   useLocation,
   useNavigate
 } from 'react-router-dom';
@@ -23,6 +21,7 @@ import StorageTest from './pages/StorageTest';
 import Log from './pages/Log';
 import UserManagement from './pages/Auth/UserManagement';
 import Camera from './pages/Camera/Camera';
+import OCRTest from './pages/OCRTest';
 import React from 'react';
 import { proDocumentList as initialProDocumentList } from './data';
 import { AuthProvider, useAuth } from './context/AuthContext'
@@ -30,9 +29,9 @@ import { MobileProvider } from './context/MobileContext'
 import ProtectedRoute from './components/common/ProtectedRoute'
 import ErrorBoundary from './components/common/ErrorBoundary'
 import Loading from './components/common/Loading'
+import LandingPage from './pages/LandingPage'
 import Login from './pages/Auth/Login'
 import ResetPassword from './pages/Auth/ResetPassword'
-import Forbidden403 from './pages/Forbidden403'
 import Header from './components/layout/Header'
 import Sidebar from './components/layout/Sidebar'
 
@@ -48,13 +47,9 @@ function App() {
       <ProDocumentListContext.Provider value={{ proDocumentList, setProDocumentList }}>
         <MobileProvider>
           <Router>
-            <AuthProvider>
-              <ErrorBoundary>
-                <Shell>
-                  <MainContent />
-                </Shell>
-              </ErrorBoundary>
-            </AuthProvider>
+            <ErrorBoundary>
+              <AppContent />
+            </ErrorBoundary>
           </Router>
         </MobileProvider>
       </ProDocumentListContext.Provider>
@@ -62,17 +57,39 @@ function App() {
   );
 }
 
+function AppContent() {
+  const location = useLocation();
+  
+  // Debug logging
+  console.log('AppContent - Current pathname:', location.pathname);
+  
+  // For public routes, don't use AuthProvider
+  if (location.pathname === '/' || location.pathname === '/login' || location.pathname === '/camera' || location.pathname === '/reset-password' || location.pathname === '/ocr') {
+    console.log('AppContent - Using public routes for:', location.pathname);
+    return (
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/camera" element={<Camera />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/ocr" element={<OCRTest />} />
+      </Routes>
+    );
+  }
+  
+  console.log('AppContent - Using AuthProvider for:', location.pathname);
+  // For all other routes, use AuthProvider
+  return (
+    <AuthProvider>
+      <Shell>
+        <MainContent />
+      </Shell>
+    </AuthProvider>
+  );
+}
 function MainContent() {
   return (
     <Routes>
-      <Route path="/" element={<LandingRedirect />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/reset-password" element={<ResetPassword />} />
-      <Route path="/403" element={<Forbidden403 />} />
-      
-      {/* Camera route - public access for testing */}
-      <Route path="/camera" element={<Camera />} />
-      
       <Route path="/dashboard" element={
         <ProtectedRoute allowedRoles={['admin','viewer']}>
           <Dashboard />
@@ -152,23 +169,14 @@ function MainContent() {
   );
 }
 
-function LandingRedirect() {
-  const { user, loading, roles, getLandingPath } = useAuth();
-  if (loading) return null;
-  if (!user) return <Navigate to="/login" replace />;
-  const to = getLandingPath(roles);
-  return <Navigate to={to} replace />;
-}
-
 function Shell({ children }) {
-  const location = useLocation();
   const { user, loading, authReady } = useAuth();
-  const isStandalone = location.pathname === '/login' || location.pathname === '/403' || location.pathname === '/reset-password';
+  const isStandalone = false; // No standalone routes in Shell since all public routes are handled separately
   const navigate = useNavigate();
   
   React.useEffect(() => {
     if (authReady && !loading && !user && !isStandalone) {
-      navigate('/403', { replace: true });
+      navigate('/login', { replace: true });
     }
   }, [authReady, loading, user, isStandalone, navigate]);
   
