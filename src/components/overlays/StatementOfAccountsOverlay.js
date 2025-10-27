@@ -155,13 +155,14 @@ export default function StatementOfAccountsOverlay({
       }
       
       alert('Statement of Account saved successfully!');
+      onClose();
     } catch (error) {
       console.error('Error saving receipt:', error);
       alert('Error saving receipt. Please try again.');
     } finally {
       setSaving(false);
     }
-  }, [groups, groupTotals, grandTotal, proNumber, existingReceipt]);
+  }, [groups, groupTotals, grandTotal, proNumber, existingReceipt, onClose]);
 
   // Export to Word
   const handleExport = useCallback(async () => {

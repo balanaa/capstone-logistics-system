@@ -9,6 +9,7 @@ import ContainerBlock from '../../components/ContainerBlock'
 import Document from '../../components/Document'
 import { getContainerOperations, generateContainerOperationsFromBol, createContainerOperation } from '../../services/supabase/containerOperations'
 import CompletionConfirmOverlay from '../../components/overlays/CompletionConfirmOverlay'
+import AddContainerOverlay from '../../components/overlays/AddContainerOverlay'
 import { checkAllContainersReturned } from '../../utils/documentCompletionUtils'
 import { updateTruckingCompletionStatus } from '../../services/supabase/truckingStatus'
 
@@ -24,11 +25,35 @@ export default function TruckingProfile() {
     const [containerLoading, setContainerLoading] = useState(false)
     const [showCompletionPrompt, setShowCompletionPrompt] = useState(false)
     const [containerRefreshTrigger, setContainerRefreshTrigger] = useState(0)
+    const [driverNamesList, setDriverNamesList] = useState('')
+    const [driverNamesArray, setDriverNamesArray] = useState([])
+    const [truckPlateNumbersList, setTruckPlateNumbersList] = useState('')
+    const [truckPlateNumbersArray, setTruckPlateNumbersArray] = useState([])
+    const [showAddContainerOverlay, setShowAddContainerOverlay] = useState(false)
+    const [highlightedContainerIds, setHighlightedContainerIds] = useState([])
 
     // Debug completion prompt state changes
     useEffect(() => {
         // console.log('🎭 [TruckingProfile] Completion prompt state changed:', showCompletionPrompt)
     }, [showCompletionPrompt])
+
+    // Parse driver names when the list changes
+    useEffect(() => {
+        const names = driverNamesList
+            .split('\n')
+            .map(name => name.trim())
+            .filter(name => name.length > 0)
+        setDriverNamesArray(names)
+    }, [driverNamesList])
+
+    // Parse truck plate numbers when the list changes
+    useEffect(() => {
+        const plates = truckPlateNumbersList
+            .split('\n')
+            .map(plate => plate.trim())
+            .filter(plate => plate.length > 0)
+        setTruckPlateNumbersArray(plates)
+    }, [truckPlateNumbersList])
 
     const handleBack = () => {
         navigate('/trucking');
@@ -380,26 +405,27 @@ export default function TruckingProfile() {
     // Handle container operations changes
     const handleContainerOperationsChange = async (operations, action) => {
         if (action === 'add') {
-            // Handle add new container
-            const containerNumber = prompt('Enter container number:')
-            if (containerNumber && containerNumber.trim()) {
-                try {
-                    const newOperation = await createContainerOperation(proNo, {
-                        container_number: containerNumber.trim()
-                    })
-                    setContainerOperations(prev => [...prev, newOperation])
-                    // Trigger refresh for status dropdown
-                    setContainerRefreshTrigger(prev => prev + 1)
-                } catch (error) {
-                    console.error('Error creating container operation:', error)
-                    alert('Error creating container operation. Please try again.')
-                }
-            }
+            // Show overlay for adding container
+            setShowAddContainerOverlay(true)
         } else {
             // Update operations list
             setContainerOperations(operations)
             // Trigger refresh for status dropdown when operations are updated
             setContainerRefreshTrigger(prev => prev + 1)
+        }
+    }
+
+    // Handle add container confirmation from overlay
+    const handleAddContainerConfirm = async (containerData) => {
+        try {
+            const newOperation = await createContainerOperation(proNo, containerData)
+            setContainerOperations(prev => [...prev, newOperation])
+            // Trigger refresh for status dropdown
+            setContainerRefreshTrigger(prev => prev + 1)
+            setShowAddContainerOverlay(false)
+        } catch (error) {
+            console.error('Error creating container operation:', error)
+            alert('Error creating container operation. Please try again.')
         }
     }
 
@@ -409,6 +435,7 @@ export default function TruckingProfile() {
                 proNo={proNo} 
                 onBack={handleBack} 
                 containerRefreshTrigger={containerRefreshTrigger}
+                onHighlightContainers={setHighlightedContainerIds}
             />
             <div style={{ overflowY: 'auto', paddingRight: 8 }}>
                 {/* General Information Window */}
@@ -429,6 +456,9 @@ export default function TruckingProfile() {
                         operations={containerOperations}
                         onOperationsChange={handleContainerOperationsChange}
                         isReadOnly={false}
+                        driverNames={driverNamesArray}
+                        truckPlateNumbers={truckPlateNumbersArray}
+                        highlightedContainerIds={highlightedContainerIds}
                     />
                     {containerLoading && (
                         <div style={{ padding: 8, color: '#666', textAlign: 'center' }}>
@@ -436,15 +466,71 @@ export default function TruckingProfile() {
                         </div>
                     )}
                 </div>
+
+                {/* Driver Names & Truck Plates Management Section (Temporary) */}
+                <div style={{ marginTop: '30px', padding: '20px', border: '1px solid #ddd', borderRadius: '8px', backgroundColor: '#f9f9f9' }}>
+                    <h3 style={{ marginBottom: '10px' }}>Autocomplete Lists</h3>
+                    <p style={{ fontSize: '14px', color: '#666', marginBottom: '10px' }}>
+                        Enter driver names and truck plate numbers (one per line) to enable autocomplete suggestions in container operations.
+                    </p>
+                    
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '15px' }}>
+                        <div>
+                            <h4 style={{ fontSize: '16px', marginBottom: '8px' }}>Driver Names</h4>
+                            <textarea
+                                value={driverNamesList}
+                                onChange={(e) => setDriverNamesList(e.target.value)}
+                                placeholder="Enter driver names, one per line&#10;e.g.,&#10;John Doe&#10;Jane Smith&#10;Bob Johnson"
+                                style={{
+                                    width: '100%',
+                                    minHeight: '150px',
+                                    padding: '10px',
+                                    fontSize: '14px',
+                                    border: '1px solid #ccc',
+                                    borderRadius: '4px',
+                                    fontFamily: 'inherit'
+                                }}
+                            />
+                        </div>
+                        
+                        <div>
+                            <h4 style={{ fontSize: '16px', marginBottom: '8px' }}>Truck Plate Numbers</h4>
+                            <textarea
+                                value={truckPlateNumbersList}
+                                onChange={(e) => setTruckPlateNumbersList(e.target.value)}
+                                placeholder="Enter plate numbers, one per line&#10;e.g.,&#10;ABC-1234&#10;XYZ-5678&#10;DEF-9012"
+                                style={{
+                                    width: '100%',
+                                    minHeight: '150px',
+                                    padding: '10px',
+                                    fontSize: '14px',
+                                    border: '1px solid #ccc',
+                                    borderRadius: '4px',
+                                    fontFamily: 'inherit'
+                                }}
+                            />
+                        </div>
+                    </div>
+                    
+                    <p style={{ fontSize: '12px', color: '#999' }}>
+                        Note: These lists are temporary and do not persist between sessions.
+                    </p>
+                </div>
             </div>
             
-                <CompletionConfirmOverlay
-                    isOpen={showCompletionPrompt}
-                    heading="Trucking Complete"
-                    bodyText={`All containers have been returned to the yard.\nWould you like to mark PRO number: ${proNo} as Complete?\nThis will move it to the Finance department.`}
-                    onConfirm={() => handleTruckingCompletion(true)}
-                    onCancel={() => handleTruckingCompletion(false)}
-                />
+            <CompletionConfirmOverlay
+                isOpen={showCompletionPrompt}
+                heading="Trucking Complete"
+                bodyText={`All containers have been returned to the yard.\nWould you like to mark PRO number: ${proNo} as Complete?\nThis will move it to the Finance department.`}
+                onConfirm={() => handleTruckingCompletion(true)}
+                onCancel={() => handleTruckingCompletion(false)}
+            />
+            
+            <AddContainerOverlay
+                isOpen={showAddContainerOverlay}
+                onConfirm={handleAddContainerConfirm}
+                onCancel={() => setShowAddContainerOverlay(false)}
+            />
         </div>
     );
 }

@@ -1,15 +1,21 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { updateContainerOperation, deleteContainerOperation, formatDateForDisplay, parseDateFromInput } from '../services/supabase/containerOperations'
 import ContainerStatusDropdown from './ContainerStatusDropdown'
 import { supabase } from '../services/supabase/client'
 import './ContainerBlock.css'
+
+// Debounce delay for auto-save (can be adjusted)
+const AUTOSAVE_DELAY = 500
 
 // Individual container block component
 function ContainerOperationBlock({ 
   operation, 
   onUpdate, 
   onDelete, 
-  isReadOnly = false 
+  isReadOnly = false,
+  driverNames = [],
+  truckPlateNumbers = [],
+  isHighlighted = false
 }) {
   const [isEditing, setIsEditing] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -17,9 +23,12 @@ function ContainerOperationBlock({
     departure_date_from_port: operation.departure_date_from_port || '',
     driver: operation.driver || '',
     truck_plate_number: operation.truck_plate_number || '',
-    chassis_number: operation.chassis_number || '',
     date_of_return_to_yard: operation.date_of_return_to_yard || ''
   })
+  const [highlightedFields, setHighlightedFields] = useState([])
+  
+  const debounceTimerRef = useRef(null)
+  const pendingChangesRef = useRef({})
 
   // Auto-save function
   const saveField = async (fieldName, value) => {
@@ -66,7 +75,7 @@ function ContainerOperationBlock({
     }
   }
 
-  // Handle field blur (auto-save)
+  // Handle field blur (auto-save with debounce and batching)
   const handleBlur = (fieldName) => {
     const currentValue = values[fieldName]
     const originalValue = operation[fieldName] || ''
@@ -74,26 +83,68 @@ function ContainerOperationBlock({
     console.log(`[handleBlur] Field: ${fieldName}, Current: "${currentValue}", Original: "${originalValue}"`)
     
     if (currentValue !== originalValue) {
-      console.log(`[handleBlur] Value changed, saving ${fieldName}`)
-      saveField(fieldName, currentValue)
-      
-      // Auto-change container status to "returned" when return date is set
-      if (fieldName === 'date_of_return_to_yard' && currentValue) {
-        console.log(`[handleBlur] Auto-setting status to returned for operation ${operation.id}`)
-        // Update the operation status directly
-        const updates = { status: 'returned' }
-        updateContainerOperation(operation.id, updates)
-          .then(() => {
-            // Notify parent to update the operation data
-            onUpdate && onUpdate(operation.id, updates)
-          })
-          .catch(error => {
-            console.error('Error updating container status:', error)
-          })
-      }
-    } else {
-      console.log(`[handleBlur] No change detected for ${fieldName}`)
+      // Add to pending changes
+      pendingChangesRef.current[fieldName] = currentValue
+      console.log(`[handleBlur] Added to pending changes: ${fieldName}`)
     }
+    
+    // Clear any existing timer
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current)
+    }
+    
+    // Set a new timer to batch save all pending changes
+    debounceTimerRef.current = setTimeout(() => {
+      const pendingChanges = { ...pendingChangesRef.current }
+      console.log(`[handleBlur] Batch saving changes after ${AUTOSAVE_DELAY}ms delay:`, pendingChanges)
+      
+      // Process date fields in pending changes
+      const processedUpdates = {}
+      for (const [field, value] of Object.entries(pendingChanges)) {
+        let processedValue = value
+        if (field.includes('date') && value) {
+          processedValue = parseDateFromInput(value)
+          console.log(`[handleBlur] Date field processed: ${value} -> ${processedValue}`)
+        }
+        processedUpdates[field] = processedValue
+      }
+      
+      // Batch save all pending changes at once
+      if (Object.keys(processedUpdates).length > 0) {
+        console.log(`[handleBlur] Batch updating operation ${operation.id} with:`, processedUpdates)
+        
+        supabase.auth.getUser().then(({ data: { user } }) => {
+          const userId = user?.id
+          
+          updateContainerOperation(operation.id, processedUpdates, userId)
+            .then(() => {
+              console.log(`[handleBlur] Batch update successful`)
+              
+              // Auto-change container status to "returned" when return date is set
+              if (processedUpdates.date_of_return_to_yard) {
+                console.log(`[handleBlur] Auto-setting status to returned for operation ${operation.id}`)
+                const statusUpdates = { status: 'returned' }
+                updateContainerOperation(operation.id, statusUpdates)
+                  .then(() => {
+                    onUpdate && onUpdate(operation.id, { ...processedUpdates, ...statusUpdates })
+                  })
+                  .catch(error => {
+                    console.error('Error updating container status:', error)
+                  })
+              } else {
+                // Notify parent with all updates
+                onUpdate && onUpdate(operation.id, processedUpdates)
+              }
+              
+              // Clear pending changes
+              pendingChangesRef.current = {}
+            })
+            .catch(error => {
+              console.error(`[handleBlur] Error saving batch changes:`, error)
+            })
+        })
+      }
+    }, AUTOSAVE_DELAY)
   }
 
   // Handle field change
@@ -101,8 +152,45 @@ function ContainerOperationBlock({
     setValues(prev => ({ ...prev, [fieldName]: value }))
   }
 
-  // Check if return date should be disabled
-  const isReturnDateDisabled = !values.departure_date_from_port
+  // Check if return date should be disabled (requires: departure date, driver, and plate number)
+  const isReturnDateDisabled = !values.departure_date_from_port || !values.driver || !values.truck_plate_number
+
+  // Handle clear all fields
+  const handleClearAll = async () => {
+    if (isReadOnly || saving) return
+    
+    if (window.confirm(`Clear all fields for ${operation.container_number}?`)) {
+      try {
+        setSaving(true)
+        const { data: { user } } = await supabase.auth.getUser()
+        const userId = user?.id
+        
+        const clearedFields = {
+          departure_date_from_port: null,
+          driver: null,
+          truck_plate_number: null,
+          date_of_return_to_yard: null
+        }
+        
+        await updateContainerOperation(operation.id, clearedFields, userId)
+        
+        // Update local state
+        setValues({
+          departure_date_from_port: '',
+          driver: '',
+          truck_plate_number: '',
+          date_of_return_to_yard: ''
+        })
+        
+        // Notify parent
+        onUpdate && onUpdate(operation.id, clearedFields)
+      } catch (error) {
+        console.error('Error clearing fields:', error)
+      } finally {
+        setSaving(false)
+      }
+    }
+  }
 
   // Handle delete
   const handleDelete = async () => {
@@ -130,7 +218,7 @@ function ContainerOperationBlock({
   }
 
   return (
-    <div className="container-block">
+    <div className={`container-block ${isHighlighted ? 'container-highlight' : ''}`}>
       {/* Header with Container/Seal info and Delete button */}
       <div className="container-block-header">
         <div className="container-info-group">
@@ -144,16 +232,30 @@ function ContainerOperationBlock({
             operationId={operation.id}
             currentStatus={operation.status || 'booking'}
             onStatusChange={(newStatus) => onUpdate && onUpdate(operation.id, { status: newStatus })}
+            returnDate={values.date_of_return_to_yard}
+            departureDate={values.departure_date_from_port}
+            driver={values.driver}
+            truckPlateNumber={values.truck_plate_number}
+            onHighlightMissingFields={setHighlightedFields}
           />
         </div>
         {!isReadOnly && (
-          <button 
-            className="delete-btn"
-            onClick={handleDelete}
-            title="Delete container operation"
-          >
-            <i className="fi fi-rs-trash"></i>
-          </button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button 
+              className="delete-btn"
+              onClick={handleClearAll}
+              title="Clear all fields"
+            >
+              <i className="fi fi-rs-rotate-left"></i>
+            </button>
+            <button 
+              className="delete-btn"
+              onClick={handleDelete}
+              title="Delete container operation"
+            >
+              <i className="fi fi-rs-trash"></i>
+            </button>
+          </div>
         )}
       </div>
 
@@ -170,7 +272,7 @@ function ContainerOperationBlock({
               value={values.departure_date_from_port ? new Date(values.departure_date_from_port).toISOString().split('T')[0] : ''}
               onChange={(e) => handleChange('departure_date_from_port', e.target.value)}
               onBlur={() => handleBlur('departure_date_from_port')}
-              className={saving ? 'saving' : ''}
+              className={`${saving ? 'saving' : ''} ${highlightedFields.includes('departure_date_from_port') ? 'field-highlight' : ''}`}
             />
           )}
         </div>
@@ -184,14 +286,24 @@ function ContainerOperationBlock({
           {isReadOnly ? (
             <div className="field-value">{getDisplayValue('driver')}</div>
           ) : (
-            <input
-              type="text"
-              placeholder="Driver name"
-              value={values.driver}
-              onChange={(e) => handleChange('driver', e.target.value)}
-              onBlur={() => handleBlur('driver')}
-              className={saving ? 'saving' : ''}
-            />
+            <>
+              <input
+                type="text"
+                list={`driver-list-${operation.id}`}
+                placeholder="Driver name"
+                value={values.driver}
+                onChange={(e) => handleChange('driver', e.target.value)}
+                onBlur={() => handleBlur('driver')}
+                className={`${saving ? 'saving' : ''} ${highlightedFields.includes('driver') ? 'field-highlight' : ''}`}
+              />
+              {driverNames.length > 0 && (
+                <datalist id={`driver-list-${operation.id}`}>
+                  {driverNames.map((name, idx) => (
+                    <option key={idx} value={name} />
+                  ))}
+                </datalist>
+              )}
+            </>
           )}
         </div>
 
@@ -201,31 +313,24 @@ function ContainerOperationBlock({
           {isReadOnly ? (
             <div className="field-value">{getDisplayValue('truck_plate_number')}</div>
           ) : (
-            <input
-              type="text"
-              placeholder="License plate"
-              value={values.truck_plate_number}
-              onChange={(e) => handleChange('truck_plate_number', e.target.value)}
-              onBlur={() => handleBlur('truck_plate_number')}
-              className={saving ? 'saving' : ''}
-            />
-          )}
-        </div>
-
-        {/* Chassis Number */}
-        <div className="field-group">
-          <label>Chassis Number</label>
-          {isReadOnly ? (
-            <div className="field-value">{getDisplayValue('chassis_number')}</div>
-          ) : (
-            <input
-              type="text"
-              placeholder="Chassis identifier"
-              value={values.chassis_number}
-              onChange={(e) => handleChange('chassis_number', e.target.value)}
-              onBlur={() => handleBlur('chassis_number')}
-              className={saving ? 'saving' : ''}
-            />
+            <>
+              <input
+                type="text"
+                list={`truck-plate-list-${operation.id}`}
+                placeholder="License plate"
+                value={values.truck_plate_number}
+                onChange={(e) => handleChange('truck_plate_number', e.target.value)}
+                onBlur={() => handleBlur('truck_plate_number')}
+                className={`${saving ? 'saving' : ''} ${highlightedFields.includes('truck_plate_number') ? 'field-highlight' : ''}`}
+              />
+              {truckPlateNumbers.length > 0 && (
+                <datalist id={`truck-plate-list-${operation.id}`}>
+                  {truckPlateNumbers.map((plate, idx) => (
+                    <option key={idx} value={plate} />
+                  ))}
+                </datalist>
+              )}
+            </>
           )}
         </div>
 
@@ -243,9 +348,9 @@ function ContainerOperationBlock({
               value={values.date_of_return_to_yard ? new Date(values.date_of_return_to_yard).toISOString().split('T')[0] : ''}
               onChange={(e) => handleChange('date_of_return_to_yard', e.target.value)}
               onBlur={() => handleBlur('date_of_return_to_yard')}
-              className={saving ? 'saving' : ''}
+              className={`${saving ? 'saving' : ''} ${highlightedFields.includes('date_of_return_to_yard') ? 'field-highlight' : ''}`}
               disabled={isReturnDateDisabled || saving}
-              title={isReturnDateDisabled ? 'Please set departure date first' : ''}
+              title={isReturnDateDisabled ? 'Please set departure date, driver, and plate number first' : ''}
             />
           )}
         </div>
@@ -264,14 +369,13 @@ function ContainerOperationBlock({
 // Add Container button component
 function AddContainerButton({ onAdd, disabled = false }) {
   return (
-    <div className="add-container-block">
-      <button 
-        className="add-container-btn"
-        onClick={onAdd}
-        disabled={disabled}
-      >
-        + Add Container
-      </button>
+    <div 
+      className="add-container-block"
+      onClick={!disabled ? onAdd : undefined}
+      style={{ cursor: disabled ? 'not-allowed' : 'pointer' }}
+    >
+      <i className="fi fi-rs-container-storage"></i>
+      <span className="add-container-text">Add Container</span>
     </div>
   )
 }
@@ -280,7 +384,10 @@ function AddContainerButton({ onAdd, disabled = false }) {
 export default function ContainerBlock({ 
   operations = [], 
   onOperationsChange, 
-  isReadOnly = false 
+  isReadOnly = false,
+  driverNames = [],
+  truckPlateNumbers = [],
+  highlightedContainerIds = []
 }) {
   const [operationsList, setOperationsList] = useState(operations)
   const [loading, setLoading] = useState(false)
@@ -339,6 +446,9 @@ export default function ContainerBlock({
               onUpdate={handleOperationUpdate}
               onDelete={handleOperationDelete}
               isReadOnly={isReadOnly}
+              driverNames={driverNames}
+              truckPlateNumbers={truckPlateNumbers}
+              isHighlighted={highlightedContainerIds.includes(operation.id)}
             />
           ))}
           

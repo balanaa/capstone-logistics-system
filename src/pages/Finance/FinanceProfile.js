@@ -27,6 +27,7 @@ export default function FinanceProfile() {
     const [receipts, setReceipts] = useState([]);
     const [loadingReceipts, setLoadingReceipts] = useState(true);
     const [editingReceipt, setEditingReceipt] = useState(null);
+    const [highlightNoReceipts, setHighlightNoReceipts] = useState(false);
 
     const handleBack = () => {
         navigate('/finance');
@@ -41,6 +42,10 @@ export default function FinanceProfile() {
         setSearchTerm(searchValue);
         console.log(`Searching for: ${searchValue}`);
         // TODO: Implement search functionality for finance documents
+    };
+
+    const handleHighlightNoReceipts = (shouldHighlight) => {
+        setHighlightNoReceipts(shouldHighlight);
     };
 
     // Fetch receipts for the current PRO
@@ -397,6 +402,7 @@ export default function FinanceProfile() {
                 onBack={handleBack}
                 onStatusChange={handleStatusChange}
                 onSearch={handleSearch}
+                onHighlightNoReceipts={handleHighlightNoReceipts}
             />
             <div style={{ overflowY: 'auto', paddingRight: 8 }}>
                 {/* Delivery Order Document Window */}
@@ -437,8 +443,11 @@ export default function FinanceProfile() {
                                 Loading receipts...
                             </div>
                         ) : receipts.length === 0 ? (
-                            <div style={{ padding: '1rem', textAlign: 'center', color: '#666' }}>
-                                No receipts found for this PRO
+                            <div 
+                                className={highlightNoReceipts ? 'no-receipts-message-highlight' : ''}
+                                style={{ padding: '1rem', textAlign: 'center', color: '#666' }}
+                            >
+                                <span>No receipts found for this PRO</span>
                             </div>
                         ) : (
                             <div className="receipt-blocks-container">

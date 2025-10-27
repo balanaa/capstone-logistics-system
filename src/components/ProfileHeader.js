@@ -115,7 +115,7 @@ export function ShipmentProfileHeader({ proNo, onBack, documents = [], onStatusC
         </div>
     );
 }
-export function TruckingProfileHeader({ proNo, onBack, documents = [], onStatusChange, containerRefreshTrigger }) {
+export function TruckingProfileHeader({ proNo, onBack, documents = [], onStatusChange, containerRefreshTrigger, onHighlightContainers }) {
     const [currentStatus, setCurrentStatus] = useState('ongoing');
     const [loading, setLoading] = useState(true);
 
@@ -159,6 +159,7 @@ export function TruckingProfileHeader({ proNo, onBack, documents = [], onStatusC
                     currentStatus={currentStatus}
                     onStatusChange={handleStatusChange}
                     refreshTrigger={containerRefreshTrigger}
+                    onHighlightContainers={onHighlightContainers}
                 />
             </div>
             <div className="trucking-header-right">
@@ -170,7 +171,7 @@ export function TruckingProfileHeader({ proNo, onBack, documents = [], onStatusC
         </div>
     );
 }
-export function FinanceProfileHeader({ proNo, onBack, onStatusChange, onSearch }) {
+export function FinanceProfileHeader({ proNo, onBack, onStatusChange, onSearch, onHighlightNoReceipts }) {
     const [currentStatus, setCurrentStatus] = useState('Unpaid');
     const [loading, setLoading] = useState(true);
 
@@ -215,6 +216,7 @@ export function FinanceProfileHeader({ proNo, onBack, onStatusChange, onSearch }
                     proNumber={proNo}
                     currentStatus={currentStatus}
                     onStatusChange={handleStatusChange}
+                    onHighlightNoReceipts={onHighlightNoReceipts}
                 />
             </div>
             <div className="shipment-header-right">

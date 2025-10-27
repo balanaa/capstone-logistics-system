@@ -116,7 +116,7 @@ export async function updateContainerOperation(operationId, updates, userId = nu
   // Get the container operation details for logging
   const { data: currentOperation, error: fetchError } = await supabase
     .from('container_operations')
-    .select('pro_number, container_number, status, driver, chassis_number, departure_date_from_port, date_of_return_to_yard')
+    .select('pro_number, container_number, status, driver, departure_date_from_port, date_of_return_to_yard')
     .eq('id', operationId)
     .single()
 
@@ -154,10 +154,10 @@ export async function updateContainerOperation(operationId, updates, userId = nu
         }
       })
     } else {
-      // Details update (driver, chassis, dates, etc.)
+      // Details update (driver, dates, etc.)
       const changedFields = Object.keys(updates).filter(key => 
         updates[key] !== currentOperation[key] && 
-        ['driver', 'chassis_number', 'departure_date_from_port', 'date_of_return_to_yard', 'truck_plate_number'].includes(key)
+        ['driver', 'departure_date_from_port', 'date_of_return_to_yard', 'truck_plate_number'].includes(key)
       )
       
       if (changedFields.length > 0) {
@@ -394,10 +394,11 @@ export async function getContainerOperationsCompletionCounts() {
     }
 
     // Count based on the status from trucking table data
+    // Note: getTruckingTableData already filters out null values
     truckingData.forEach(row => {
-      if (row.rawStatus === 'completed') {
+      if (row && row.rawStatus === 'completed') {
         counts.completed++
-      } else {
+      } else if (row && row.rawStatus) {
         counts.ongoing++
       }
     })

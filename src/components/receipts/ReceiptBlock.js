@@ -115,7 +115,7 @@ export default function ReceiptBlock({ receipt, onEdit, onExport, onDelete }) {
           <i className="fi fi-rs-pencil"></i>
         </button>
         <button className="btn-primary" onClick={onExport}>
-          <i className="fi fi-rs-download"></i>
+          <i className="fi fi-rs-file-word"></i>
           Download Word
         </button>
         <button className="btn-danger" onClick={onDelete}>

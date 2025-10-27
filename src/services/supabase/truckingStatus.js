@@ -114,7 +114,7 @@ export async function getTruckingTableData() {
   }
 
   // Transform the data for table display - one row per PRO
-  return Promise.all(prosData.map(async pro => {
+  const results = await Promise.all(prosData.map(async pro => {
     // Group documents by type
     const documentsByType = {};
     pro.documents.forEach(doc => {
@@ -235,6 +235,9 @@ export async function getTruckingTableData() {
       proNumber: pro.pro_number
     }
   }))
+  
+  // Filter out null values (PROs without BOL documents)
+  return results.filter(row => row !== null)
 }
 
 export async function getTruckingContainerStatus(containerId) {
@@ -380,14 +383,22 @@ export async function updateTruckingCompletionStatus(proNumber, newStatus, userI
 
   // First, let's check if the trucking_status column exists
   try {
+    // Prepare update object
+    const updateData = {
+      trucking_status: newStatus,
+      updated_by: userId,
+      updated_at: new Date().toISOString()
+    }
+
+    // If setting to completed, also ensure finance_status is set to Unpaid
+    if (newStatus === 'completed') {
+      updateData.finance_status = 'Unpaid'
+    }
+
     // Try to update the pro table with new trucking status
     const { data, error } = await supabase
       .from('pro')
-      .update({
-        trucking_status: newStatus,
-        updated_by: userId,
-        updated_at: new Date().toISOString()
-      })
+      .update(updateData)
       .eq('pro_number', proNumber)
       .select('trucking_status, updated_at')
       .single()

@@ -77,6 +77,9 @@ export default function TableList({
   const [currentPage, setCurrentPage] = useState(1);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [holdTimer, setHoldTimer] = useState(null);
+  const [activeHoldCell, setActiveHoldCell] = useState(null);
+  const [expandedColumn, setExpandedColumn] = useState(null);
 
   // derive search keys from columns if not provided
   const effectiveSearchKeys = useMemo(() => {
@@ -207,6 +210,58 @@ export default function TableList({
     return String(raw);
   };
 
+  // PRO number formatter - highlight last 3 digits
+  const formatProNumber = (raw) => {
+    if (!raw) return '-';
+    const str = String(raw);
+    if (str.length <= 3) return str; // If too short, return as is
+    
+    // Split into prefix and last 3 digits
+    const prefix = str.slice(0, -3);
+    const suffix = str.slice(-3);
+    
+    return (
+      <span>
+        <span>{prefix}</span>
+        <span style={{ fontWeight: 900, fontSize: '1.1em' }}>{suffix}</span>
+      </span>
+    );
+  };
+
+  // Document chips formatter - convert document names to colored chips
+  const formatDocumentChips = (documentsString) => {
+    if (!documentsString || documentsString === '-') return '-';
+    
+    const documentMap = {
+      'Bill of Lading': { abbr: 'BoL', color: '#FFD4D4', fullName: 'Bill of Lading' },
+      'Invoice': { abbr: 'CI', color: '#C9D9E4', fullName: 'Commercial Invoice' },
+      'Packing List': { abbr: 'PL', color: '#E7FFD3', fullName: 'Packing List' },
+      'Delivery Order': { abbr: 'DO', color: '#FFF6C0', fullName: 'Delivery Order' }
+    };
+    
+    const documents = documentsString.split(', ').filter(d => d.trim());
+    
+    return (
+      <div className="document-chips-container">
+        {documents.map((doc, index) => {
+          const docInfo = documentMap[doc.trim()];
+          if (!docInfo) return null;
+          
+          return (
+            <span 
+              key={index}
+              className="document-chip"
+              style={{ backgroundColor: docInfo.color }}
+              title={docInfo.fullName}
+            >
+              {docInfo.abbr}
+            </span>
+          );
+        })}
+      </div>
+    );
+  };
+
   // Clear filters handler
   const clearFilters = () => {
     setStartDate('');
@@ -216,14 +271,59 @@ export default function TableList({
     setCurrentPage(1);
   };
 
-  // Double-click handler to copy value and show toast
-  const handleCellDoubleClick = (value) => {
-    navigator.clipboard.writeText(value).then(() => {
-      setToastMessage(`Copied '${value}'`);
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 3000); // Hide toast after 3 seconds
-    }).catch(err => console.error("Failed to copy: ", err));
+  // Hold handler constants
+  const holdDuration = 500; // 500ms hold time
+
+  // Hold handlers to copy value with visual progress
+  const handleCellMouseDown = (value, cellId) => {
+    setActiveHoldCell(cellId); // Set which cell is being held
+    
+    const timer = setTimeout(() => {
+      navigator.clipboard.writeText(value).then(() => {
+        setToastMessage(`Copied '${value}'`);
+        setShowToast(true);
+        setActiveHoldCell(null);
+        setTimeout(() => setShowToast(false), 3000);
+      }).catch(err => console.error("Failed to copy: ", err));
+      
+      setHoldTimer(null);
+    }, holdDuration);
+    
+    setHoldTimer(timer);
   };
+
+  const handleCellMouseUp = () => {
+    if (holdTimer) {
+      clearTimeout(holdTimer);
+      setHoldTimer(null);
+    }
+    setActiveHoldCell(null);
+  };
+
+  const handleCellMouseLeave = () => {
+    if (holdTimer) {
+      clearTimeout(holdTimer);
+      setHoldTimer(null);
+    }
+    setActiveHoldCell(null);
+  };
+
+  // Handle column expand/collapse on double-click
+  const handleCellDoubleClick = (columnKey) => {
+    setExpandedColumn(prev => prev === columnKey ? null : columnKey);
+  };
+
+  // Click outside to collapse expanded column
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (expandedColumn && !e.target.closest('.table-list')) {
+        setExpandedColumn(null);
+      }
+    };
+    
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [expandedColumn]);
 
   return (
     <div className="table-list-root">
@@ -297,12 +397,14 @@ export default function TableList({
             <i className="fi fi-rs-clear-alt"></i>
             Clear Filters
           </button>
-          <div className="page-indicator" aria-live="polite">
-            {currentPage}/{totalPages}
-          </div>
-          <div className="page-arrows">
-            <button className="arrow-btn" onClick={handlePrev} disabled={currentPage === 1}>&lt;</button>
-            <button className="arrow-btn" onClick={handleNext} disabled={currentPage === totalPages}>&gt;</button>
+          <div className="pagination-controls-wrapper">
+            <div className="page-indicator" aria-live="polite">
+              {currentPage}/{totalPages}
+            </div>
+            <div className="page-arrows">
+              <button className="arrow-btn" onClick={handlePrev} disabled={currentPage === 1}>&lt;</button>
+              <button className="arrow-btn" onClick={handleNext} disabled={currentPage === totalPages}>&gt;</button>
+            </div>
           </div>
         </div>
 
@@ -413,7 +515,15 @@ export default function TableList({
             <tr>
               <th style={{ width: '50px' }} scope="col" aria-hidden="true"></th>
               {columns.map(col => (
-                <th key={col.key} scope="col">{col.label}</th>
+                <th 
+                  key={col.key} 
+                  scope="col"
+                  data-column={col.key}
+                  className={expandedColumn === col.key ? 'column-expanded' : 'column-shrunk'}
+                  onDoubleClick={() => handleCellDoubleClick(col.key)}
+                >
+                  {col.label}
+                </th>
               ))}
             </tr>
           </thead>
@@ -435,8 +545,10 @@ export default function TableList({
                   return statusMap[statusText] || 'status-pending'
                 }
                 const statusClass = `status-chip ${getStatusClass(status)}`;
+                // Check if row is complete (Completed or Paid status)
+                const isComplete = status === 'completed' || status === 'paid';
                 return (
-                  <tr key={row.id || idx}>
+                  <tr key={row.id || idx} className={isComplete ? 'row-complete' : ''}>
                     <td data-label="Actions">
                       <button
                         className="table-row-arrow"
@@ -450,19 +562,84 @@ export default function TableList({
                     {columns.map(col => {
                       const value = row[col.key] ?? '-';
                       if (col.key === dateField || col.key === 'created_at' || col.key === 'filedOn' || col.key === 'createdOn') {
-                        return <td key={col.key} data-label={col.label}>{formatDate(row[col.key] || row[dateField] || row.created_at || row.createdOn)}</td>;
+                        return (
+                          <td 
+                            key={col.key} 
+                            data-label={col.label}
+                            className={expandedColumn === col.key ? 'column-expanded' : 'column-shrunk'}
+                            onDoubleClick={() => handleCellDoubleClick(col.key)}
+                          >
+                            {formatDate(row[col.key] || row[dateField] || row.created_at || row.createdOn)}
+                          </td>
+                        );
                       }
                       if (col.key === 'consignee' || col.key === 'consigneeName') {
                         console.log(`[TableList] Processing ${col.key} for row ${row.id}:`, { value, formatted: formatConsignee(value) });
-                        return <td key={col.key} data-label={col.label} onDoubleClick={() => handleCellDoubleClick(value)}>{formatConsignee(value)}</td>;
+                        const cellId = `${row.id}-${col.key}`;
+                        return (
+                          <td 
+                            key={col.key} 
+                            data-label={col.label} 
+                            onMouseDown={() => handleCellMouseDown(value, cellId)}
+                            onMouseUp={handleCellMouseUp}
+                            onMouseLeave={handleCellMouseLeave}
+                            onDoubleClick={() => handleCellDoubleClick(col.key)}
+                            className={`${activeHoldCell === cellId ? 'cell-copy-holding' : ''} ${expandedColumn === col.key ? 'column-expanded' : 'column-shrunk'}`}
+                          >
+                            {activeHoldCell === cellId && (
+                              <div className="copy-progress-bar" style={{ animationDuration: `${holdDuration}ms` }}></div>
+                            )}
+                            <span className="cell-content-wrapper">{formatConsignee(value)}</span>
+                          </td>
+                        );
                       }
                       if (col.key === 'containerNoSealNo' || col.key === 'containerNo' || col.key === 'containerNumber') {
                         const formattedContainers = formatContainers(value);
+                        const cellId = `${row.id}-${col.key}`;
                         return (
-                          <td key={col.key} data-label={col.label} className="container-cell" onDoubleClick={() => handleCellDoubleClick(value)}>
-                            {formattedContainers.split('\n').map((line, index) => (
-                              <div key={index} className="container-line">{line}</div>
-                            ))}
+                          <td 
+                            key={col.key} 
+                            data-label={col.label} 
+                            className={`container-cell ${activeHoldCell === cellId ? 'cell-copy-holding' : ''} ${expandedColumn === col.key ? 'column-expanded' : 'column-shrunk'}`} 
+                            onMouseDown={() => handleCellMouseDown(value, cellId)}
+                            onMouseUp={handleCellMouseUp}
+                            onMouseLeave={handleCellMouseLeave}
+                            onDoubleClick={() => handleCellDoubleClick(col.key)}
+                          >
+                            {activeHoldCell === cellId && (
+                              <div className="copy-progress-bar" style={{ animationDuration: `${holdDuration}ms` }}></div>
+                            )}
+                            <span className="cell-content-wrapper">
+                              {formattedContainers.split('\n').map((line, index) => (
+                                <div key={index} className="container-line">{line}</div>
+                              ))}
+                            </span>
+                          </td>
+                        );
+                      }
+                      if (col.key === proKey) {
+                        // Format PRO number with highlighted last 3 digits
+                        return (
+                          <td 
+                            key={col.key} 
+                            data-label={col.label}
+                            className={expandedColumn === col.key ? 'column-expanded' : 'column-shrunk'}
+                            onDoubleClick={() => handleCellDoubleClick(col.key)}
+                          >
+                            {formatProNumber(value)}
+                          </td>
+                        );
+                      }
+                      if (col.key === 'documentsRecorded') {
+                        // Format documents as colored chips
+                        return (
+                          <td 
+                            key={col.key} 
+                            data-label={col.label}
+                            className={expandedColumn === col.key ? 'column-expanded' : 'column-shrunk'}
+                            onDoubleClick={() => handleCellDoubleClick(col.key)}
+                          >
+                            {formatDocumentChips(value)}
                           </td>
                         );
                       }
@@ -470,7 +647,12 @@ export default function TableList({
                         // Check if this is a trucking status (has containerId)
                         if (row.containerId && row.rawStatus) {
                           return (
-                            <td key={col.key} data-label={col.label}>
+                            <td 
+                              key={col.key} 
+                              data-label={col.label}
+                              className={expandedColumn === col.key ? 'column-expanded' : 'column-shrunk'}
+                              onDoubleClick={() => handleCellDoubleClick(col.key)}
+                            >
                               <TruckingStatusDropdown
                                 currentStatus={row.rawStatus}
                                 onStatusChange={handleTruckingStatusChange}
@@ -480,11 +662,32 @@ export default function TableList({
                           );
                         }
                         // Regular status chip for other departments
-                        return <td key={col.key} data-label={col.label}><span className={statusClass}>{value}</span></td>;
+                        return (
+                          <td 
+                            key={col.key} 
+                            data-label={col.label}
+                            className={expandedColumn === col.key ? 'column-expanded' : 'column-shrunk'}
+                            onDoubleClick={() => handleCellDoubleClick(col.key)}
+                          >
+                            <span className={statusClass}>{value}</span>
+                          </td>
+                        );
                       }
+                      const cellId = `${row.id}-${col.key}`;
                       return (
-                        <td key={col.key} data-label={col.label} onDoubleClick={() => handleCellDoubleClick(value)}>
-                          {value}
+                        <td 
+                          key={col.key} 
+                          data-label={col.label} 
+                          onMouseDown={() => handleCellMouseDown(value, cellId)}
+                          onMouseUp={handleCellMouseUp}
+                          onMouseLeave={handleCellMouseLeave}
+                          onDoubleClick={() => handleCellDoubleClick(col.key)}
+                          className={`${activeHoldCell === cellId ? 'cell-copy-holding' : ''} ${expandedColumn === col.key ? 'column-expanded' : 'column-shrunk'}`}
+                        >
+                          {activeHoldCell === cellId && (
+                            <div className="copy-progress-bar" style={{ animationDuration: `${holdDuration}ms` }}></div>
+                          )}
+                          <span className="cell-content-wrapper">{value}</span>
                         </td>
                       );
                     })}
@@ -500,10 +703,10 @@ export default function TableList({
 
       {/* Pagination - moved outside table wrapper */}
       <div className="table-list-pagination">
-        <button className="pagination-btn" onClick={() => handleGoto(1)} disabled={currentPage === 1}>
+        <button className="pagination-btn" onClick={() => handleGoto(1)} disabled={currentPage === 1} title="First">
           <i className="fi fi-rs-angle-double-left"></i>
         </button>
-        <button className="pagination-btn" onClick={handlePrev} disabled={currentPage === 1}>
+        <button className="pagination-btn" onClick={handlePrev} disabled={currentPage === 1} title="Previous">
           <i className="fi fi-rs-angle-left"></i>
         </button>
         {paginationWindow[0] > 1 && <span className="dots">…</span>}
@@ -518,10 +721,10 @@ export default function TableList({
           </button>
         ))}
         {paginationWindow[paginationWindow.length - 1] < totalPages && <span className="dots">…</span>}
-        <button className="pagination-btn" onClick={handleNext} disabled={currentPage === totalPages}>
+        <button className="pagination-btn" onClick={handleNext} disabled={currentPage === totalPages} title="Next">
           <i className="fi fi-rs-angle-right"></i>
         </button>
-        <button className="pagination-btn" onClick={() => handleGoto(totalPages)} disabled={currentPage === totalPages}>
+        <button className="pagination-btn" onClick={() => handleGoto(totalPages)} disabled={currentPage === totalPages} title="Last">
           <i className="fi fi-rs-angle-double-right"></i>
         </button>
       </div>

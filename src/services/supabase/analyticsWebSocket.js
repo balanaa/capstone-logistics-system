@@ -1,6 +1,7 @@
 // Analytics WebSocket Service
 // Real-time data updates for Analytics page using Supabase Realtime
 
+import React from 'react';
 import { supabase } from './supabaseClient';
 
 /**
@@ -10,7 +11,7 @@ import { supabase } from './supabaseClient';
 export class AnalyticsWebSocketManager {
   constructor() {
     this.channels = new Map();
-    this.callbacks = new Map();
+    this.callbacks = {}; // Store callbacks as object, not Map
     this.isConnected = false;
     this.reconnectAttempts = 0;
     this.maxReconnectAttempts = 5;
@@ -339,7 +340,7 @@ export class AnalyticsWebSocketManager {
     });
     
     this.channels.clear();
-    this.callbacks.clear();
+    this.callbacks = {}; // Reset callbacks to empty object instead of clearing
     this.isConnected = false;
     this.reconnectAttempts = 0;
     
@@ -390,6 +391,3 @@ export function useAnalyticsWebSocket(callbacks = {}) {
     analyticsWebSocket
   };
 }
-
-// Import React for the hook
-import React from 'react';

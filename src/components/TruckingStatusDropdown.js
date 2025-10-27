@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { updateTruckingCompletionStatus, checkAllContainersReturned } from '../services/supabase/truckingStatus';
+import { updateTruckingCompletionStatus } from '../services/supabase/truckingStatus';
 import { supabase } from '../services/supabase/client';
 
-const TruckingStatusDropdown = ({ proNumber, currentStatus, onStatusChange, refreshTrigger }) => {
+const TruckingStatusDropdown = ({ proNumber, currentStatus, onStatusChange, refreshTrigger, onHighlightContainers }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [status, setStatus] = useState(currentStatus || 'ongoing');
     const [loading, setLoading] = useState(false);
     const [allContainersReturned, setAllContainersReturned] = useState(false);
     const [checkingContainers, setCheckingContainers] = useState(false);
+    const [nonReturnedContainerIds, setNonReturnedContainerIds] = useState([]);
     const dropdownRef = useRef(null);
 
     // Update local state when currentStatus prop changes
@@ -22,9 +23,24 @@ const TruckingStatusDropdown = ({ proNumber, currentStatus, onStatusChange, refr
             
             setCheckingContainers(true);
             try {
-                const allReturned = await checkAllContainersReturned(proNumber);
+                // Get container operations to check which ones are not returned
+                const { data: operations, error } = await supabase
+                    .from('container_operations')
+                    .select('id, status')
+                    .eq('pro_number', proNumber);
+                
+                if (error) throw error;
+                
+                const allReturned = operations.every(op => op.status === 'returned');
                 setAllContainersReturned(allReturned);
-                console.log(`[TruckingStatusDropdown] PRO ${proNumber}: All containers returned: ${allReturned}`);
+                
+                // Track which container IDs are not returned
+                const nonReturnedIds = operations
+                    .filter(op => op.status !== 'returned')
+                    .map(op => op.id);
+                setNonReturnedContainerIds(nonReturnedIds);
+                
+                console.log(`[TruckingStatusDropdown] PRO ${proNumber}: All containers returned: ${allReturned}, Non-returned IDs:`, nonReturnedIds);
             } catch (error) {
                 console.error('Error checking container status:', error);
                 setAllContainersReturned(false);
@@ -135,9 +151,20 @@ const TruckingStatusDropdown = ({ proNumber, currentStatus, onStatusChange, refr
                                 key={option.value}
                                 className={`status-option ${option.value === status ? 'selected' : ''} ${isDisabled ? 'disabled' : ''}`}
                                 onClick={() => !isDisabled && handleStatusChange(option.value)}
+                                onMouseEnter={() => {
+                                    if (isDisabled && onHighlightContainers && nonReturnedContainerIds.length > 0) {
+                                        onHighlightContainers(nonReturnedContainerIds);
+                                    }
+                                }}
+                                onMouseLeave={() => {
+                                    if (isDisabled && onHighlightContainers) {
+                                        onHighlightContainers([]);
+                                    }
+                                }}
                                 style={{ 
                                     opacity: isDisabled ? 0.5 : 1,
-                                    cursor: isDisabled ? 'not-allowed' : 'pointer'
+                                    cursor: isDisabled ? 'not-allowed' : 'pointer',
+                                    pointerEvents: 'auto'
                                 }}
                                 title={isDisabled ? 'All containers must be returned first' : ''}
                             >

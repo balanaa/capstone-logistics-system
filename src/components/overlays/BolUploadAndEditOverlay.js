@@ -239,18 +239,7 @@ export default function BolUploadAndEditOverlay({
       throw new Error('Validation failed')
     }
     
-    // Add pairs data to formData so it gets passed to the parent
-    const enhancedFormData = {
-      ...formData,
-      pairs: pairs
-    }
-    
-    // Clean number fields before submission to database
-    const cleanedFormData = cleanNumberFieldsForDatabase(enhancedFormData, [
-      'no_of_packages',
-      'gross_weight'
-    ])
-    
+    // Prepare all BOL field values for submission
     const allValues = {
       bl_number: blNumber,
       shipper,
@@ -276,7 +265,13 @@ export default function BolUploadAndEditOverlay({
       'gross_weight'
     ])
     
-    onSubmit(file, cleanedFormData)
+    // Merge cleaned BOL values with pairs data
+    const finalFormData = {
+      ...cleanedAllValues,
+      pairs: pairs
+    }
+    
+    onSubmit(file, finalFormData)
   }
 
   // Format the last edited timestamp

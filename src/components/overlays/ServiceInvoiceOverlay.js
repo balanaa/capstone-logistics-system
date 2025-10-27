@@ -326,13 +326,14 @@ export default function ServiceInvoiceOverlay({
       }
       
       alert('Service Invoice saved successfully!');
+      onClose();
     } catch (error) {
       console.error('Error saving receipt:', error);
       alert('Error saving receipt. Please try again.');
     } finally {
       setSaving(false);
     }
-  }, [groups, groupTotals, grandTotal, vatExemptChecked, vatPercent, withholdingTaxChecked, vatableSales, vatValue, vatExemptSales, totalSalesVatInc, lessVat, amountNetOfVat, addVat, withholdingTax, totalAmountDue, proNumber, existingReceipt]);
+  }, [groups, groupTotals, grandTotal, vatExemptChecked, vatPercent, withholdingTaxChecked, vatableSales, vatValue, vatExemptSales, totalSalesVatInc, lessVat, amountNetOfVat, addVat, withholdingTax, totalAmountDue, proNumber, existingReceipt, onClose]);
 
   // Export to Word
   const handleExport = useCallback(async () => {
